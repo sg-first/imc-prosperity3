@@ -4,7 +4,7 @@
 ## 框架：
 1. 跑框架（https://imc-prosperity.notion.site/Writing-an-Algorithm-in-Python-658e233a26e24510bfccf0b1df647858）的时候，要在目录下复制一个datamodel.py解决引用问题。
 2.将datamodel的import部分复制到框架文件开头，并把TradingState, Order,Listing,Trade,Observation添加到对datamodel的引用（from datamodel import）中
-3.把result的定义部分（result = {}
+3.把result的定义部分  result = {}
         for product in state.order_depths:
             order_depth: OrderDepth = state.order_depths[product]
             orders: List[Order] = []
@@ -25,5 +25,5 @@
                     print("SELL", str(best_bid_amount) + "x", best_bid)
                     orders.append(Order(product, best_bid, -best_bid_amount))
 
-            result[product] = orders）加在result报错处之前
+            result[product] = orders  加在result报错处之前
 4.点击denomination报错处，把两个对应的冒号改成等号。
