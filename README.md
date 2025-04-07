@@ -6,26 +6,7 @@
 2. 将datamodel的import部分复制到框架文件开头，并把TradingState, Order,Listing,Trade,Observation添加到对datamodel的引用（from datamodel import）中
 3. 把result的定义部分
 ``` python
-        result = {}
-        for product in state.order_depths:
-            order_depth: OrderDepth = state.order_depths[product]
-            orders: List[Order] = []
-            acceptable_price = 10  # Participant should calculate this value
-            print("Acceptable price : " + str(acceptable_price))
-            print("Buy Order depth : " + str(len(order_depth.buy_orders)) + ", Sell order depth : " + str(
-                len(order_depth.sell_orders)))
-
-            if len(order_depth.sell_orders) != 0:
-                best_ask, best_ask_amount = list(order_depth.sell_orders.items())[0]
-                if int(best_ask) < acceptable_price:
-                    print("BUY", str(-best_ask_amount) + "x", best_ask)
-                    orders.append(Order(product, best_ask, -best_ask_amount))
-
-            if len(order_depth.buy_orders) != 0:
-                best_bid, best_bid_amount = list(order_depth.buy_orders.items())[0]
-                if int(best_bid) > acceptable_price:
-                    print("SELL", str(best_bid_amount) + "x", best_bid)
-                    orders.append(Order(product, best_bid, -best_bid_amount))
+        result = {}       
 ```
 加在result报错处之前
 
