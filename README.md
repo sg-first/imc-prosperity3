@@ -26,7 +26,6 @@
                 if int(best_bid) > acceptable_price:
                     print("SELL", str(best_bid_amount) + "x", best_bid)
                     orders.append(Order(product, best_bid, -best_bid_amount))
-```
-`result[product] = orders`  加在result报错处之前
+```加在result报错处之前
 
 4. 点击denomination报错处，把两个对应的冒号改成等号。
