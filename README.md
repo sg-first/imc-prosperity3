@@ -14,7 +14,7 @@ from typing import List）复制到框架文件开头。
 5. 根据算法要求定义计算中间价格的函数，再通过函数返回的结果得到fair_calculations。因此这个参数是否存在需要看算法是否涉及到中间价。
 ![输入图片说明](midprice.png)
 6. 打叉叉的，是我觉得没必要用的代码。可以删掉。
-7. 改market_data、trade_history读取的文件路径，定义的file_name必须以*.log*结尾(这样生成的结果才能放到dashborad里分析)
+7. 改market_data、trade_history读取的文件路径，定义的file_name必须**以.log结尾**(这样生成的结果才能放到dashborad里分析)
 ![输入图片说明](gai.png)
 8. 如果这一环节并没有用中间价，则使用下面那一个chunk来运行。
 ![输入图片说明](chunk.png)
