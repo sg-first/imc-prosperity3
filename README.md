@@ -4,6 +4,8 @@
 from typing import List）复制到框架文件开头。
 
 # 回测器的使用方法
+注意：现在可以直接使用[老李改完的回测器](/dashboard/)了，下面这些操作不用全部进行
+
 1. 点击每一轮文件下的run-backtest.ipynb文件，将原来引进的模块改成现在算法文件的Trader。譬如from round_3 import Trader
 ![输入图片说明](module.png)
 2. 改trader，在算法文件里扒拉Product这个类
