@@ -6,7 +6,7 @@ from typing import List）复制到框架文件开头。
 # 回测器的使用方法
 1. 看每一轮文件下的run-backtest.ipynb文件，将原来引进的模块改成现在算法文件的Trader。
 2. 改Product、listings、position_limit、fair_calculations、
-3. 改market_data、trade_history、file_name以.log结尾
+3. 改market_data、trade_history文件名，file_name以.log结尾
 ![输入图片说明](%E7%B1%BB.png)
 ![输入图片说明](%E4%BA%A7%E5%93%81.png)
 ![输入图片说明](%E4%BF%AE%E6%94%B9%E6%95%B0%E6%8D%AE.png)
