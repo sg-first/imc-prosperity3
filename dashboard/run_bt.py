@@ -23,7 +23,7 @@ position_limit = {
     'KELP': 50
 }
 
-# fix:这里写错了，函数需要实际定义，@老李 改一下
+# 这里写错了，函数需要实际定义，需要老李改一下
 fair_calculations = {'''
     "RAINFOREST_RESIN": calculate_rainforestResin_fair,
     "SQUID_INK": calculate_squidink_fair
@@ -35,6 +35,6 @@ market_data = pd.read_csv(f"./round-1-island-data-bottle/prices_round_1_day_{day
 trade_history = pd.read_csv(f"./round-1-island-data-bottle/trades_round_1_day_{day}.csv", sep=";", header=0)
 
 trader = Trader()
-backtester = Backtester(trader, listings, position_limit, fair_calculations, market_data, trade_history, "trade_history_sim.log")
+backtester = Backtester(trader, listings, position_limit, {}, market_data, trade_history, "trade_history_sim.log")  # fair_calculations函数没写所以传空，backtester里找不到函数，会用中间价作为fair
 backtester.run()
 print(backtester.pnl)
