@@ -1,6 +1,6 @@
 import numpy as np
 
-from datamodel import OrderDepth, UserId, TradingState, Order
+from datamodel import OrderDepth, UserId, TradingState, Order,Trade
 from typing import List
 import json
 import statistics
@@ -48,11 +48,27 @@ class Trader:
         self.kelp_diff_history = []
         self.LIMIT = {Product.KELP:50, Product.SQUID_INK:50, Product.RAINFOREST_RESIN:50}
 
+    def get_current_kelp_price(self, trade:Trade, order_depth: OrderDepth,market_trades) -> float:
+        """获取当前KELP价格（优先使用最新交易价，其次使用订单簿中位数）"""
+        # 从市场交易记录获取
+        kelp_trades = market_trades.get("KELP", trade.price)
+        if kelp_trades:
+            latest_trade = max(kelp_trades, key=lambda t: t.timestamp)
+            return latest_trade.price
+
+        # 从订单簿计算中位数
+        if len(order_depth.buy_orders) != 0 and len(order_depth.sell_orders) != 0:
+            best_bid = max(order_depth.buy_orders.keys())
+            best_ask = min(order_depth.sell_orders.keys())
+            return (best_bid + best_ask) / 2
+
+        # 无数据可用
+        return None
 
 
-    def get_predictions_ink_tendency(self, current_kelp_price):
+    def get_predictions_ink_tendency(self,current_kelp_price):
+        current_kelp_price
         self.kelp_price.append(current_kelp_price)
-
 
         # 计算当前差分
         if len(self.kelp_price) < 2:
