@@ -1,5 +1,5 @@
 # 框架
-1. 跑框架（https://imc-prosperity.notion.site/Writing-an-Algorithm-in-Python-658e233a26e24510bfccf0b1df647858）的时候，要在目录下复制一个datamodel.py解决引用问题。
+1. 跑框架（<https://imc-prosperity.notion.site/Writing-an-Algorithm-in-Python-658e233a26e24510bfccf0b1df647858>）的时候，要在目录下复制一个datamodel.py解决引用问题。
 2. 将datamodel的import部分（from datamodel import OrderDepth,TradingState, Order
 from typing import List）复制到框架文件开头。
 
