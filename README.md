@@ -27,3 +27,8 @@ from typing import List）复制到框架文件开头。
 2. 如运行成功，保持运行并打开网址即可
 3. 修改路径为存有日志的文件地址，选择日志
 
+# 算法提交
+1. 打开链接<https://prosperity.imc.com/archipelago>，登录
+2. 点击dashboard
+3. 找到对应的比赛轮次-upload algorithm，再把对应的算法文件（trader类）拖进去即可
+4. 退回dashboard界面下翻，可以找到对应的提交结果（用回测数据绘制成的图像）
