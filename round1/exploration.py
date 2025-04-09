@@ -10,8 +10,8 @@ from statsmodels.stats.diagnostic import acorr_ljungbox
 from statsmodels.tsa.vector_ar.var_model import VAR
 
 day = -2
-market_data = pd.read_csv(f"./round-1-island-data-bottle/prices_round_1_day_{day}.csv", sep=";", header=0)
-trade_history = pd.read_csv(f"./round-1-island-data-bottle/trades_round_1_day_{day}.csv", sep=";", header=0)
+market_data = pd.read_csv(f"../dashboard/round-1-island-data-bottle/prices_round_1_day_{day}.csv", sep=";", header=0)
+trade_history = pd.read_csv(f"../dashboard/round-1-island-data-bottle/trades_round_1_day_{day}.csv", sep=";", header=0)
 
 kelp = market_data[market_data['product'] == 'KELP']
 kelp_price = kelp['mid_price']
