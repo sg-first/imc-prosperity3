@@ -8,7 +8,7 @@ import jsonpickle
 import numpy as np
 import math
 from datamodel import Listing, ConversionObservation
-from baseline import Trader
+from baseline_MA import Trader
 from backtester import Backtester
 
 listings = {
