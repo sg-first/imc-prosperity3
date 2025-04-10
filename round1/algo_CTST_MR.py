@@ -11,23 +11,27 @@ class Trader:
     # 不需要自己维护position了，因为TradingState中已经有了
     self.MAX_POS = 20
     self.WINDOW_SIZE = 20  # 滑动窗口大小
-    self.BUY_THRESHOLD = 0.1  # 买入阈值：低于最低价+极差的20%
-    self.SELL_THRESHOLD = 1.05  # 卖出阈值：高于最低价+极差的80%
+    self.WINDOW_SIZE2 = 200
+    self.KELP_MEAN = None
+    self.BUY_THRESHOLD = 0.4  # 买入阈值：低于最低价+极差的20%
+    self.SELL_THRESHOLD = 0.8  # 卖出阈值：高于最低价+极差的80%
     self.PRICE_LIMITS = { # 为不同产品设置固定的极值点参数
       "RAINFOREST_RESIN": {
         "max": 10003.5,  # 最高价
         "min": 9996.5,   # 最低价
       },
       "SQUID_INK": {
-        "max": 2183.0,   # 最高价
-        "min": 1956.5,   # 最低价
+        "max": 2181.0,   # 最高价
+        "min": 1814,   # 最低价
       },
+        # 我再他妈的确认以下，第负二天1964去到2175，很多时间是1965附近。然后第负一天慢慢跌到1950附近很多时间都是，涨到2038，立刻跌到1930，然后回到1950附近，然后一直跌到1814
+        # kelp大部分都在2020-2030附近
       "KELP":{
         "max": 2035.5,  # 最高价
-        "min": 2013.5,   # 最低价
+        "min": 2013,   # 最低价
       }
     }
-
+# 已经有中间价格了！
   def get_mid_price(self, order_depth: OrderDepth) -> float:
     """计算中间价"""
     # 获取最优买价（买方愿意买入的最高价格）
@@ -39,7 +43,7 @@ class Trader:
       return best_bid + best_ask
     # 返回买卖价的中间值
     return (best_bid + best_ask) / 2
-  
+
   def get_price_direction(self, prices: list) -> float:
     """计算价格方向
     使用窗口内第一个点和最后一个点计算整体趋势斜率
@@ -54,74 +58,100 @@ class Trader:
     window = prices[-self.WINDOW_SIZE:]  # 取最近的WINDOW_SIZE个价格
     return window[-1] - window[0]  # 终点减起点得到趋势
 
-  def run(self, state: TradingState):
-    result = {}
-    # 遍历所有产品
-    for product in state.order_depths:
-      # 如果产品不在价格历史中，初始化价格历史
-      if product not in self.price_history:
-        self.price_history[product] = []
-      # 获取当前产品的订单深度
-      order_depth = state.order_depths[product]
-      orders: List[Order] = []
+  def get_kelp_mean_price(self,product:str):
+      if product in self.price_history and len(self.price_history[product]) > 0:
+          if len(self.price_history[product]) > self.WINDOW_SIZE2:
+              self.price_history[product].pop(0)  # 移除最旧的数据
+          self.KELP_MEAN = np.mean(self.price_history[product])
 
-      if product == "RAINFOREST_RESIN": # 使用均值回归策略
-        mr_trader = MRTrader(PARAMS)
-        orders = handle_resin_trading(mr_trader, state)
-      else:
-        # 获取当前持仓，使用state.position
-        current_pos = state.position.get(product, 0)
-        
-        # 计算当前中间价并更新价格历史
-        mid_price = self.get_mid_price(order_depth)
-        self.price_history[product].append(mid_price)
-        
-        # 控制滑动窗口大小
-        if len(self.price_history[product]) > self.WINDOW_SIZE:
-          self.price_history[product].pop(0)
-        
-        # 当有足够的历史数据时执行策略
-        if len(self.price_history[product]) >= 2:
-          price_direction = self.get_price_direction(self.price_history[product])
-          
-          # 使用固定的极值点参数
-          price_limits = self.PRICE_LIMITS.get(product)
-          if price_limits:
-            max_price = price_limits["max"]
-            min_price = price_limits["min"]
-            
-            best_bid = max(order_depth.buy_orders.keys()) if order_depth.buy_orders else 0
-            best_ask = min(order_depth.sell_orders.keys()) if order_depth.sell_orders else 0
-            
-            # 首先确保市场上有买单和卖单（市场有流动性）
-            if best_bid and best_ask:
-              # 买入条件：价格低于最低价+极差的20%且在上升
-              if (mid_price < (max_price-min_price) * self.BUY_THRESHOLD + min_price and
-                price_direction > 0 and 
-                current_pos < self.MAX_POS):
-                ask_volume = abs(order_depth.sell_orders[best_ask]) # 获取最优卖价档位的可用数量
-                buy_volume = min(ask_volume, self.MAX_POS - current_pos) # 根据当前持仓和最大持仓限制买入数量
-                # 如果买入数量大于0，则创建买入订单
-                if buy_volume > 0:
-                  orders.append(Order(product, best_ask, buy_volume)) # 创建买入订单
-                  print(f"{product} BUY {buy_volume} @ {best_ask} Direction: {price_direction:.2f}")
-              
-              # 卖出条件：价格高于最低价+极差的80%且在下降
-              elif (mid_price > (max_price-min_price) * self.SELL_THRESHOLD + min_price and
-                  price_direction < 0 and 
-                  current_pos > -self.MAX_POS):
-                bid_volume = abs(order_depth.buy_orders[best_bid])
-                sell_volume = min(bid_volume, self.MAX_POS + current_pos)
-                if sell_volume > 0:
-                  orders.append(Order(product, best_bid, -sell_volume))
-                  print(f"{product} SELL {sell_volume} @ {best_bid} Direction: {price_direction:.2f}")  
-      result[product] = orders
-    
-    traderData = json.dumps({
-      "price_history": self.price_history
-    })
-    
-    return result, 0, traderData
+  def run(self, state: TradingState):
+      result = {}
+      # 遍历所有产品
+      for product in state.order_depths:
+          # 如果产品不在价格历史中，初始化价格历史
+          if product not in self.price_history:
+              self.price_history[product] = []
+
+          # 获取当前产品的订单深度
+          order_depth = state.order_depths[product]
+          orders: List[Order] = []
+          current_pos = state.position.get(product, 0)
+
+          # 计算当前中间价并更新价格历史
+          mid_price = self.get_mid_price(order_depth)
+          self.price_history[product].append(mid_price)
+
+          if product == "RAINFOREST_RESIN":  # 使用均值回归策略
+              mr_trader = MRTrader(PARAMS)
+              orders = handle_resin_trading(mr_trader, state)
+
+          elif product == "KELP":
+              # KELP专用逻辑
+              self.get_kelp_mean_price(product)
+              if self.KELP_MEAN is not None and len(order_depth.sell_orders) > 0 and len(order_depth.buy_orders) > 0:
+                  best_ask = min(order_depth.sell_orders.keys())
+                  best_bid = max(order_depth.buy_orders.keys())
+
+                  if best_ask < self.KELP_MEAN and current_pos < self.MAX_POS:
+                      ask_volume = abs(order_depth.sell_orders[best_ask])
+                      buy_volume = min(ask_volume, self.MAX_POS - current_pos)
+                      if buy_volume > 0:
+                          orders.append(Order(product, best_ask, buy_volume))
+                          print(f"KELP BUY {buy_volume} @ {best_ask} (Mean: {self.KELP_MEAN:.2f})")
+
+                  if best_bid > self.KELP_MEAN and current_pos > -self.MAX_POS:
+                      bid_volume = abs(order_depth.buy_orders[best_bid])
+                      sell_volume = min(bid_volume, self.MAX_POS + current_pos)
+                      if sell_volume > 0:
+                          orders.append(Order(product, best_bid, -sell_volume))
+                          print(f"KELP SELL {sell_volume} @ {best_bid} (Mean: {self.KELP_MEAN:.2f})")
+          else:
+              # 其他产品逻辑
+              if len(self.price_history[product]) > self.WINDOW_SIZE:
+                  self.price_history[product].pop(0)
+
+              if len(self.price_history[product]) >= 2:
+                  price_direction = self.get_price_direction(self.price_history[product])
+                  price_limits = self.PRICE_LIMITS.get(product)
+
+                  if price_limits:
+                      max_price = price_limits["max"]
+                      min_price = price_limits["min"]
+                      best_bid = max(order_depth.buy_orders.keys()) if order_depth.buy_orders else 0
+                      best_ask = min(order_depth.sell_orders.keys()) if order_depth.sell_orders else 0
+
+                      if best_bid and best_ask:
+                          if (mid_price < (max_price - min_price) * self.BUY_THRESHOLD + min_price and
+                                  price_direction > 0 and
+                                  current_pos < self.MAX_POS):
+                              ask_volume = abs(order_depth.sell_orders[best_ask])
+                              buy_volume = min(ask_volume, self.MAX_POS - current_pos)
+                              if buy_volume > 0:
+                                  orders.append(Order(product, best_ask, buy_volume))
+                                  print(f"{product} BUY {buy_volume} @ {best_ask} Direction: {price_direction:.2f}")
+
+                          elif (mid_price > (max_price - min_price) * self.SELL_THRESHOLD + min_price and
+                                price_direction < 0 and
+                                current_pos > -self.MAX_POS):
+                              bid_volume = abs(order_depth.buy_orders[best_bid])
+                              sell_volume = min(bid_volume, self.MAX_POS + current_pos)
+                              if sell_volume > 0:
+                                  orders.append(Order(product, best_bid, -sell_volume))
+                                  print(f"{product} SELL {sell_volume} @ {best_bid} Direction: {price_direction:.2f}")
+
+          result[product] = orders
+
+      traderData = json.dumps({
+          "price_history": self.price_history,
+          "kelp_mean": self.KELP_MEAN
+      })
+
+      return result, 0, traderData
+
+
+
+
+
 
 
 
