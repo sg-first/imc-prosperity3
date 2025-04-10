@@ -31,6 +31,8 @@ class Trader:
         "min": 2013,   # 最低价
       }
     }
+    self.MRTraderObj = MRTrader(PARAMS)
+
 # 已经有中间价格了！
   def get_mid_price(self, order_depth: OrderDepth) -> float:
     """计算中间价"""
@@ -58,11 +60,13 @@ class Trader:
     window = prices[-self.WINDOW_SIZE:]  # 取最近的WINDOW_SIZE个价格
     return window[-1] - window[0]  # 终点减起点得到趋势
 
+
   def get_kelp_mean_price(self,product:str):
       if product in self.price_history and len(self.price_history[product]) > 0:
           if len(self.price_history[product]) > self.WINDOW_SIZE2:
               self.price_history[product].pop(0)  # 移除最旧的数据
           self.KELP_MEAN = np.mean(self.price_history[product])
+
 
   def run(self, state: TradingState):
       result = {}
@@ -82,8 +86,7 @@ class Trader:
           self.price_history[product].append(mid_price)
 
           if product == "RAINFOREST_RESIN":  # 使用均值回归策略
-              mr_trader = MRTrader(PARAMS)
-              orders = handle_resin_trading(mr_trader, state)
+              orders = self.MRTraderObj.handle_resin_trading(state)
 
           elif product == "KELP":
               # KELP专用逻辑
@@ -148,67 +151,6 @@ class Trader:
 
       return result, 0, traderData
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def handle_resin_trading(trader, state: TradingState):
-    # 从state获取当前仓位和订单簿
-      resin_position = state.position.get(Product.RAINFOREST_RESIN, 0)
-      order_depth = state.order_depths[Product.RAINFOREST_RESIN]  # 直接取订单簿
-      
-      resin_take_orders, buy_order_volume, sell_order_volume = (
-          trader.take_orders(
-              Product.RAINFOREST_RESIN,
-              state.order_depths[Product.RAINFOREST_RESIN],
-              trader.params[Product.RAINFOREST_RESIN]["fair_value"],
-              trader.params[Product.RAINFOREST_RESIN]["take_width"],
-              resin_position,
-          )
-      )
-
-      # 平仓
-      resin_clear_orders, buy_order_volume, sell_order_volume = (
-          trader.clear_orders(
-              Product.RAINFOREST_RESIN,
-              state.order_depths[Product.RAINFOREST_RESIN],
-              trader.params[Product.RAINFOREST_RESIN]["fair_value"],
-              trader.params[Product.RAINFOREST_RESIN]["clear_width"],
-              resin_position,
-              buy_order_volume,
-              sell_order_volume,
-          )
-      )
-
-      # 做市
-      resin_make_orders, _, _ = trader.make_orders(
-          Product.RAINFOREST_RESIN,
-          state.order_depths[Product.RAINFOREST_RESIN],
-          trader.params[Product.RAINFOREST_RESIN]["fair_value"],
-          resin_position,
-          buy_order_volume,
-          sell_order_volume,
-          trader.params[Product.RAINFOREST_RESIN]["disregard_edge"],
-          trader.params[Product.RAINFOREST_RESIN]["join_edge"],
-          trader.params[Product.RAINFOREST_RESIN]["default_edge"],
-          True,
-          trader.params[Product.RAINFOREST_RESIN]["soft_position_limit"],
-      )
-
-      # 合并订单并返回
-      return resin_take_orders + resin_clear_orders + resin_make_orders
 
 class Product:
     RAINFOREST_RESIN = "RAINFOREST_RESIN"
@@ -465,6 +407,53 @@ class MRTrader:
         )
 
         return orders, buy_order_volume, sell_order_volume
+
+
+    def handle_resin_trading(trader, state: TradingState):
+        # 从state获取当前仓位和订单簿
+        resin_position = state.position.get(Product.RAINFOREST_RESIN, 0)
+        order_depth = state.order_depths[Product.RAINFOREST_RESIN]  # 直接取订单簿
+
+        resin_take_orders, buy_order_volume, sell_order_volume = (
+            trader.take_orders(
+                Product.RAINFOREST_RESIN,
+                state.order_depths[Product.RAINFOREST_RESIN],
+                trader.params[Product.RAINFOREST_RESIN]["fair_value"],
+                trader.params[Product.RAINFOREST_RESIN]["take_width"],
+                resin_position,
+            )
+        )
+
+        # 平仓
+        resin_clear_orders, buy_order_volume, sell_order_volume = (
+            trader.clear_orders(
+                Product.RAINFOREST_RESIN,
+                state.order_depths[Product.RAINFOREST_RESIN],
+                trader.params[Product.RAINFOREST_RESIN]["fair_value"],
+                trader.params[Product.RAINFOREST_RESIN]["clear_width"],
+                resin_position,
+                buy_order_volume,
+                sell_order_volume,
+            )
+        )
+
+        # 做市
+        resin_make_orders, _, _ = trader.make_orders(
+            Product.RAINFOREST_RESIN,
+            state.order_depths[Product.RAINFOREST_RESIN],
+            trader.params[Product.RAINFOREST_RESIN]["fair_value"],
+            resin_position,
+            buy_order_volume,
+            sell_order_volume,
+            trader.params[Product.RAINFOREST_RESIN]["disregard_edge"],
+            trader.params[Product.RAINFOREST_RESIN]["join_edge"],
+            trader.params[Product.RAINFOREST_RESIN]["default_edge"],
+            True,
+            trader.params[Product.RAINFOREST_RESIN]["soft_position_limit"],
+        )
+
+        # 合并订单并返回
+        return resin_take_orders + resin_clear_orders + resin_make_orders
 
 
     def run(self, state: TradingState):
