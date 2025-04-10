@@ -11,8 +11,8 @@ class Trader:
     # 不需要自己维护position了，因为TradingState中已经有了
     self.MAX_POS = 20
     self.WINDOW_SIZE = 20  # 滑动窗口大小
-    self.BUY_THRESHOLD = 0.8  # 买入阈值：低于最高点的80%
-    self.SELL_THRESHOLD = 0.2  # 卖出阈值：高于最低点的20%
+    self.BUY_THRESHOLD = 0.1  # 买入阈值：低于最低价+极差的20%
+    self.SELL_THRESHOLD = 1.05  # 卖出阈值：高于最低价+极差的80%
     self.PRICE_LIMITS = { # 为不同产品设置固定的极值点参数
       "RAINFOREST_RESIN": {
         "max": 10003.5,  # 最高价
@@ -95,8 +95,8 @@ class Trader:
             
             # 首先确保市场上有买单和卖单（市场有流动性）
             if best_bid and best_ask:
-              # 买入条件：价格低于固定最高价的80%且在上升
-              if (mid_price < max_price * self.BUY_THRESHOLD and 
+              # 买入条件：价格低于最低价+极差的20%且在上升
+              if (mid_price < (max_price-min_price) * self.BUY_THRESHOLD + min_price and
                 price_direction > 0 and 
                 current_pos < self.MAX_POS):
                 ask_volume = abs(order_depth.sell_orders[best_ask]) # 获取最优卖价档位的可用数量
@@ -106,8 +106,8 @@ class Trader:
                   orders.append(Order(product, best_ask, buy_volume)) # 创建买入订单
                   print(f"{product} BUY {buy_volume} @ {best_ask} Direction: {price_direction:.2f}")
               
-              # 卖出条件：价格高于固定最低价的120%且在下降
-              elif (mid_price > min_price * self.SELL_THRESHOLD and 
+              # 卖出条件：价格高于最低价+极差的80%且在下降
+              elif (mid_price > (max_price-min_price) * self.SELL_THRESHOLD + min_price and
                   price_direction < 0 and 
                   current_pos > -self.MAX_POS):
                 bid_volume = abs(order_depth.buy_orders[best_bid])
@@ -122,7 +122,18 @@ class Trader:
     })
     
     return result, 0, traderData
-  
+
+
+
+
+
+
+
+
+
+
+
+
 def handle_resin_trading(trader, state: TradingState):
     # 从state获取当前仓位和订单簿
       resin_position = state.position.get(Product.RAINFOREST_RESIN, 0)
