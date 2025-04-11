@@ -41,25 +41,28 @@ merged_data['spread2'] = merged_data['mid_price_picnic_basket2'] - (merged_data[
 
 # 打印价差数据
 print("每个时间步的价差:")
-print(merged_data[['timestamp', 'day', 'spread1', 'spread2']].head(100))  # 打印前100行
+print(merged_data[['timestamp', 'day', 'spread1', 'spread2']].head(50))  # 打印前50行
 
-# 使用pivot_table确保每个标的都读出一组中间价
-pivot_table = merged_data.pivot_table(index=['timestamp'], values=['spread1', 'spread2'], aggfunc='mean')
+# 创建一个新的列，将 timestamp 和 day 组合起来，确保每个时间戳和天数的组合都是唯一的
+merged_data['timestamp_day'] = merged_data['timestamp'] + merged_data['day'] * 1000000
+
+# 按新的组合列排序
+merged_data.sort_values(by=['timestamp_day'], inplace=True)
 
 # 绘制图表
 plt.figure(figsize=(12, 6), dpi=100)  # 设置图表尺寸和分辨率
 
 # 绘制spread1
-plt.plot(pivot_table.index, pivot_table['spread1'], label='PICNIC_BASKET1 Spread', linewidth=0.8, color='blue')
-plt.text(pivot_table.index[-1], pivot_table['spread1'].iloc[-1], 'Spread1', color='blue', ha='left')
+plt.plot(merged_data['timestamp_day'], merged_data['spread1'], label='PICNIC_BASKET1 Spread', linewidth=0.8, color='blue')
+plt.text(merged_data['timestamp_day'].iloc[-1], merged_data['spread1'].iloc[-1], 'Spread1', color='blue', ha='left')
 
 # 绘制spread2
-plt.plot(pivot_table.index, pivot_table['spread2'], label='PICNIC_BASKET2 Spread', linewidth=0.8, color='red', linestyle='--')
-plt.text(pivot_table.index[-1], pivot_table['spread2'].iloc[-1], 'Spread2', color='red', ha='left')
+plt.plot(merged_data['timestamp_day'], merged_data['spread2'], label='PICNIC_BASKET2 Spread', linewidth=0.8, color='red', linestyle='--')
+plt.text(merged_data['timestamp_day'].iloc[-1], merged_data['spread2'].iloc[-1], 'Spread2', color='red', ha='left')
 
 # 设置图表标题和坐标轴标签
 plt.title('Picnic Basket Spreads Over Time')
-plt.xlabel('Timestamp')
+plt.xlabel('Timestamp + Day')
 plt.ylabel('Spread')
 plt.legend()
 
