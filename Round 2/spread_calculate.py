@@ -6,7 +6,7 @@ days = [-1, 0, 1]
 
 # 读取所有天数的数据并合并
 all_market_data = pd.concat([
-    pd.read_csv(f"D:/Program Files/IMC/round-2-island-data-bottle/prices_round_2_day_{day}.csv", sep=";", header=0).assign(day=day)
+    pd.read_csv(f"D:/Program Files/IMC/Round 2/round-2-island-data-bottle/prices_round_2_day_{day}.csv", sep=";", header=0).assign(day=day)
     for day in days
 ])
 
@@ -33,27 +33,34 @@ merged_data.rename(columns={
 }, inplace=True)
 
 # 计算每个时间步的价差
+# PICNIC_BASKET1的价差：PICNIC_BASKET1价格 - (6*CROISSANTS + 3*JAMS + 1*DJEMBES)
 merged_data['spread1'] = merged_data['mid_price_picnic_basket1'] - (merged_data['mid_price_croissants'] * 6 + merged_data['mid_price_jams'] * 3 + merged_data['mid_price_djembes'])
+
+# PICNIC_BASKET2的价差：PICNIC_BASKET2价格 - (4*CROISSANTS + 2*JAMS)
 merged_data['spread2'] = merged_data['mid_price_picnic_basket2'] - (merged_data['mid_price_croissants'] * 4 + merged_data['mid_price_jams'] * 2)
 
-# 按timestamp分组，计算每个时间点的平均价差
-spread_data = merged_data.groupby('timestamp')[['spread1', 'spread2']].mean().reset_index()
-
 # 打印价差数据
-print("每个时间点的平均价差:")
-print(spread_data[['timestamp', 'spread1', 'spread2']].head(50))  # 打印前50行
+print("每个时间步的价差:")
+print(merged_data[['timestamp', 'day', 'spread1', 'spread2']].head(100))  # 打印前100行
+
+# 使用pivot_table确保每个标的都读出一组中间价
+pivot_table = merged_data.pivot_table(index=['timestamp'], values=['spread1', 'spread2'], aggfunc='mean')
 
 # 绘制图表
 plt.figure(figsize=(12, 6), dpi=100)  # 设置图表尺寸和分辨率
 
-# 绘制spread1和spread2
-plt.plot(spread_data['timestamp'], spread_data['spread1'], label='PICNIC_BASKET1 Spread', linewidth=0.5, color='blue')
-plt.plot(spread_data['timestamp'], spread_data['spread2'], label='PICNIC_BASKET2 Spread', linewidth=0.5, color='green', linestyle='--')
+# 绘制spread1
+plt.plot(pivot_table.index, pivot_table['spread1'], label='PICNIC_BASKET1 Spread', linewidth=0.8, color='blue')
+plt.text(pivot_table.index[-1], pivot_table['spread1'].iloc[-1], 'Spread1', color='blue', ha='left')
+
+# 绘制spread2
+plt.plot(pivot_table.index, pivot_table['spread2'], label='PICNIC_BASKET2 Spread', linewidth=0.8, color='red', linestyle='--')
+plt.text(pivot_table.index[-1], pivot_table['spread2'].iloc[-1], 'Spread2', color='red', ha='left')
 
 # 设置图表标题和坐标轴标签
-plt.title('Picnic Basket Spreads Over Time', fontsize=14)
-plt.xlabel('Timestamp', fontsize=12)
-plt.ylabel('Spread', fontsize=12)
+plt.title('Picnic Basket Spreads Over Time')
+plt.xlabel('Timestamp')
+plt.ylabel('Spread')
 plt.legend()
 
 # 旋转x轴标签以提高可读性
