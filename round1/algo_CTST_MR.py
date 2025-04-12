@@ -65,7 +65,7 @@ class Trader:
       if product in self.price_history and len(self.price_history[product]) > 0:
           if len(self.price_history[product]) > self.WINDOW_SIZE2:
               self.price_history[product].pop(0)  # 移除最旧的数据
-          self.KELP_MEAN = np.mean(self.price_history[product])
+          return np.mean(self.price_history[product])
 
 
   def run(self, state: TradingState):
@@ -90,24 +90,24 @@ class Trader:
 
           elif product == "KELP":
               # KELP专用逻辑
-              self.get_kelp_mean_price(product)
-              if self.KELP_MEAN is not None and len(order_depth.sell_orders) > 0 and len(order_depth.buy_orders) > 0:
+              KELP_MEAN = self.get_kelp_mean_price(product)
+              if KELP_MEAN is not None and len(order_depth.sell_orders) > 0 and len(order_depth.buy_orders) > 0:
                   best_ask = min(order_depth.sell_orders.keys())
                   best_bid = max(order_depth.buy_orders.keys())
 
-                  if best_ask < self.KELP_MEAN and current_pos < self.MAX_POS:
+                  if best_ask < KELP_MEAN and current_pos < self.MAX_POS:
                       ask_volume = abs(order_depth.sell_orders[best_ask])
                       buy_volume = min(ask_volume, self.MAX_POS - current_pos)
                       if buy_volume > 0:
                           orders.append(Order(product, best_ask, buy_volume))
-                          print(f"KELP BUY {buy_volume} @ {best_ask} (Mean: {self.KELP_MEAN:.2f})")
+                          print(f"KELP BUY {buy_volume} @ {best_ask} (Mean: {KELP_MEAN:.2f})")
 
-                  if best_bid > self.KELP_MEAN and current_pos > -self.MAX_POS:
+                  if best_bid > KELP_MEAN and current_pos > -self.MAX_POS:
                       bid_volume = abs(order_depth.buy_orders[best_bid])
                       sell_volume = min(bid_volume, self.MAX_POS + current_pos)
                       if sell_volume > 0:
                           orders.append(Order(product, best_bid, -sell_volume))
-                          print(f"KELP SELL {sell_volume} @ {best_bid} (Mean: {self.KELP_MEAN:.2f})")
+                          print(f"KELP SELL {sell_volume} @ {best_bid} (Mean: {KELP_MEAN:.2f})")
           else:
               # 其他产品逻辑
               if len(self.price_history[product]) > self.WINDOW_SIZE:
