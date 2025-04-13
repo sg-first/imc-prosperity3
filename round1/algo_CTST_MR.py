@@ -9,12 +9,12 @@ class Trader:
   def __init__(self):
     self.price_history = {}  # 存储每个产品的价格历史
     # 不需要自己维护position了，因为TradingState中已经有了
-    self.MAX_POS = 20
+    self.MAX_POS = 50
     self.WINDOW_SIZE = 20  # 滑动窗口大小
     self.WINDOW_SIZE2 = 200
     self.KELP_MEAN = None
-    self.BUY_THRESHOLD = 0.4  # 买入阈值：低于最低价+极差的20%
-    self.SELL_THRESHOLD = 0.8  # 卖出阈值：高于最低价+极差的80%
+    self.BUY_THRESHOLD = 0.1  # 买入阈值：低于最低价+极差的20%
+    self.SELL_THRESHOLD = 0.4  # 卖出阈值：高于最低价+极差的80%
     self.PRICE_LIMITS = { # 为不同产品设置固定的极值点参数
       "RAINFOREST_RESIN": {
         "max": 10003.5,  # 最高价
@@ -24,8 +24,7 @@ class Trader:
         "max": 2181.0,   # 最高价
         "min": 1814,   # 最低价
       },
-        # 我再他妈的确认以下，第负二天1964去到2175，很多时间是1965附近。然后第负一天慢慢跌到1950附近很多时间都是，涨到2038，立刻跌到1930，然后回到1950附近，然后一直跌到1814
-        # kelp大部分都在2020-2030附近
+
       "KELP":{
         "max": 2035.5,  # 最高价
         "min": 2013,   # 最低价
@@ -125,7 +124,7 @@ class Trader:
 
                       if best_bid and best_ask:
                           if (mid_price < (max_price - min_price) * self.BUY_THRESHOLD + min_price and
-                                  price_direction > 0 and
+                                  price_direction < 5 and
                                   current_pos < self.MAX_POS):
                               ask_volume = abs(order_depth.sell_orders[best_ask])
                               buy_volume = min(ask_volume, self.MAX_POS - current_pos)
@@ -134,7 +133,7 @@ class Trader:
                                   print(f"{product} BUY {buy_volume} @ {best_ask} Direction: {price_direction:.2f}")
 
                           elif (mid_price > (max_price - min_price) * self.SELL_THRESHOLD + min_price and
-                                price_direction < 0 and
+                                price_direction >= 5 and
                                 current_pos > -self.MAX_POS):
                               bid_volume = abs(order_depth.buy_orders[best_bid])
                               sell_volume = min(bid_volume, self.MAX_POS + current_pos)
