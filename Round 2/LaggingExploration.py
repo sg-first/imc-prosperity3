@@ -51,13 +51,93 @@ plt.plot(range(len(merged_data['merge2'])),merged_data['merge2'],color = 'blue')
 plt.plot(range(len(merged_data['merge2'])),merged_data['mid_price_picnic_basket2']/6,color = 'green')
 plt.show()
 a = merged_data['merge1'].diff().std()
-print(a)
+
+
+
+
+
 
 
 
 
 merged_data['a'] = merged_data['merge2'].diff()
 merged_data['b'] = merged_data['mid_price_picnic_basket2'].diff()
+
+
+
+
+# 特征工程
+def create_features(df):
+    # 计算合成价格 - 使用正确的列名
+    df["synthetic"] = 4 * df["mid_price_croissants"] + 2 * df["mid_price_jams"]
+
+    # 重命名basket2列
+    df = df.rename(columns={'mid_price_picnic_basket2': 'basket2'})
+
+    # 计算差分序列（使用百分比变化避免量纲问题）
+    df["basket2_diff"] = df["basket2"].pct_change() * 100  # 百分比变化
+    df["synthetic_diff"] = df["synthetic"].pct_change() * 100
+
+    # 创建滞后特征
+    lags = [1, 2, 3, 4]
+    for lag in lags:
+        df[f"synthetic_lag{lag}"] = df["synthetic_diff"].shift(lag)
+
+    return df
+
+# 模型预测
+def generate_predictions(df, coefficients):
+    # 使用滞后特征和系数生成预测值
+    df["pred_diff"] = 0
+    for lag, coef in coefficients.items():
+        df["pred_diff"] += coef * df[f"synthetic_lag{lag}"]
+
+    # 生成符号预测
+    df["pred_sign"] = np.sign(df["pred_diff"])
+    df["true_sign"] = np.sign(df["basket2_diff"])
+
+    return df
+
+# 结果分析
+def analyze_results(df):
+    # 过滤无效数据（前4个时间点没有足够滞后）
+    valid_df = df.dropna(subset=["pred_sign", "true_sign"])
+
+    # 计算准确率
+    accuracy = (valid_df["pred_sign"] == valid_df["true_sign"]).mean()
+
+    # 详细分析
+    print(f"总样本数：{len(valid_df)}")
+    print(f"预测准确率：{accuracy:.2%}")
+    print("\n符号分布：")
+    print(
+        pd.crosstab(
+            valid_df["pred_sign"],
+            valid_df["true_sign"],
+            rownames=["Predicted"],
+            colnames=["Actual"],
+        )
+    )
+
+    # 可视化预测效果
+    plt.figure(figsize=(12, 6))
+    plt.plot(valid_df["timestamp"], valid_df["basket2_diff"], label="Actual", alpha=0.7)
+    plt.plot(valid_df["timestamp"], valid_df["pred_diff"], label="Predicted", alpha=0.7)
+    plt.title("Basket2价格差分预测效果")
+    plt.ylabel("百分比变化")
+    plt.legend()
+    plt.show()
+
+    return valid_df
+
+# 系数配置
+coefficients = {1: 0.452987, 2: 0.174008, 3: 0.028813, 4: 0.054057}
+
+# 执行流程
+df = create_features(merged_data)
+df = generate_predictions(df, coefficients)
+results = analyze_results(df)
+
 
 # ================= 分析函数 =================
 def manual_ccf(x, y, max_lag=20):
@@ -87,6 +167,14 @@ def print_granger_results(results_dict):
               "***" if p_value < 0.01 else
               "**" if p_value < 0.05 else
               "*" if p_value < 0.1 else "")
+
+
+
+
+
+
+
+
 
 # ================= 主要分析流程 =================
 if __name__ == "__main__":
@@ -147,3 +235,4 @@ if __name__ == "__main__":
     irf.plot(orth=False, impulse='b', response='a')
     plt.suptitle('b对a的脉冲响应')
     plt.show()
+

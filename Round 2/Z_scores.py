@@ -80,9 +80,9 @@ class Trader:
         }
         self.MRTraderObj = MRTrader(PARAMS)
         self.LIMIT = {
-            Product.RAINFOREST_RESIN: 20,
-            Product.KELP: 20,
-            Product.SQUID_INK: 20,
+            Product.RAINFOREST_RESIN: 50,
+            Product.KELP: 50,
+            Product.SQUID_INK: 50,
             Product.PICNIC_BASKET1: 60,
             Product.PICNIC_BASKET2: 100,
             Product.DJEMBES: 60,
