@@ -47,7 +47,7 @@ class Trader:
       return best_bid + best_ask
     # 返回买卖价的中间值
     return (best_bid + best_ask) / 2
-  
+
   def get_price_direction(self, prices: list) -> float:
     """计算价格方向
     使用窗口内第一个点和最后一个点计算整体趋势斜率
@@ -89,7 +89,9 @@ class Trader:
                             position: int, buy_order_volume: int, sell_order_volume: int) ->List[Order]:
     orders: List[Order] = []
     order_depth = state.order_depths[product]
+    # 最高卖价
     best_bid = max(order_depth.buy_orders.keys(), default=0)
+    # 最低买价
     best_ask = min(order_depth.sell_orders.keys(), default=0)
 
     # 最大持仓比例
@@ -103,10 +105,10 @@ class Trader:
       spread_ratio = 0.001
     # spread_ratio = 0.003
 
-    buy_diff = int(best_bid * spread_ratio)
-    sell_diff = int(best_ask * spread_ratio)
-    print("buy_diff", buy_diff)
-    print("sell_diff", sell_diff)
+    sell_diff = int(best_bid * spread_ratio)
+    buy_diff = int(best_ask * spread_ratio)
+    # print("buy_diff", buy_diff)
+    # print("sell_diff", sell_diff)
 
     # # 预计价格上涨时
     # if tendency > 0 :
@@ -126,8 +128,8 @@ class Trader:
       sell_diff = max(0, sell_diff - 1)
 
     # 挂单价格
-    buy_price = best_bid - buy_diff
-    sell_price = best_ask + sell_diff
+    sell_price = best_bid + sell_diff   # 高于别人挂的买单最高价挂卖单
+    buy_price = best_ask - buy_diff
 
     # buy_price = max(self.price_history[product]) + buy_diff
     # sell_price = min(self.price_history[product]) - sell_diff
@@ -155,9 +157,9 @@ class Trader:
     # print("sell_price", sell_price)
     # print("best_bid", best_bid)
     # 生成订单
-    if valid_buy > 0 and buy_price < best_ask:  # 买单价需低于最优卖价
+    if valid_buy > 0 :
       orders.append(Order(product, buy_price, valid_buy))
-    if valid_sell > 0 and sell_price > best_bid:  # 卖单价需高于最优买价
+    if valid_sell > 0 :
       orders.append(Order(product, sell_price, -valid_sell))
 
 
@@ -177,50 +179,53 @@ class Trader:
       order_depth = state.order_depths[product]
       orders: List[Order] = []
       make_orders: List[Order] = []
-      
+
       # 获取当前持仓，使用state.position
       current_pos = state.position.get(product, 0)
-      print(f"{product}  current_pos: {current_pos:.2f}")
-      
+      # print(f"{product}  current_pos: {current_pos:.2f}")
+
       # 计算当前中间价并更新价格历史
       mid_price = self.get_mid_price(order_depth)
       self.price_history[product].append(mid_price)
-      
+
       # 控制滑动窗口大小
       if len(self.price_history[product]) > self.WINDOW_SIZE:
         self.price_history[product].pop(0)
-      
+
       # 当有足够的历史数据时执行策略
       if len(self.price_history[product]) >= 2:
         price_direction = self.get_price_direction(self.price_history[product])
-        
+
         # 使用固定的极值点参数
         price_limits = self.PRICE_LIMITS.get(product)
         if price_limits:
           max_price = price_limits["max"]
           min_price = price_limits["min"]
-          
+
           best_bid = max(order_depth.buy_orders.keys()) if order_depth.buy_orders else 0
           best_ask = min(order_depth.sell_orders.keys()) if order_depth.sell_orders else 0
-          
+          ask_volume = abs(order_depth.sell_orders[best_ask])  # 获取最优卖价档位的可用数量
+          bid_volume = abs(order_depth.buy_orders[best_bid])
           # 首先确保市场上有买单和卖单（市场有流动性）
           if best_bid and best_ask:
             # 买入条件：价格低于固定最高价的80%且在上升
-            if (mid_price < max_price * self.BUY_THRESHOLD and 
-              price_direction > 0 and 
+            if (mid_price < max_price * self.BUY_THRESHOLD and
+              price_direction > 0 and
               current_pos < self.MAX_POS):
-              ask_volume = abs(order_depth.sell_orders[best_ask]) # 获取最优卖价档位的可用数量
+              # ask_volume = abs(order_depth.sell_orders[best_ask]) # 获取最优卖价档位的可用数量
+              print(f"{product}  ask_volume: {ask_volume:.2f}")
               buy_volume = min(ask_volume, self.MAX_POS - current_pos) # 根据当前持仓和最大持仓限制买入数量
               # 如果买入数量大于0，则创建买入订单
               if buy_volume > 0:
                 orders.append(Order(product, best_ask, buy_volume)) # 创建买入订单
                 print(f"{product} BUY {buy_volume} @ {best_ask} Direction: {price_direction:.2f}")
-            
+
             # 卖出条件：价格高于固定最低价的120%且在下降
-            elif (mid_price > min_price * self.SELL_THRESHOLD and 
-                price_direction < 0 and 
+            elif (mid_price > min_price * self.SELL_THRESHOLD and
+                price_direction < 0 and
                 current_pos > -self.MAX_POS):
-              bid_volume = abs(order_depth.buy_orders[best_bid])
+              # bid_volume = abs(order_depth.buy_orders[best_bid])
+              print(f"{product}  bid_volume: {bid_volume:.2f}")
               sell_volume = min(bid_volume, self.MAX_POS + current_pos)
               if sell_volume > 0:
                 orders.append(Order(product, best_bid, -sell_volume))
@@ -228,11 +233,11 @@ class Trader:
         # 做市
         make_orders= self.make_tendency_orders(product, state, price_direction,
                                                     current_pos, bid_volume,  ask_volume)
-        print("make_orders", make_orders)
+        # print("make_orders", make_orders)
     result[product] = orders  + make_orders
-    
+
     traderData = json.dumps({
       "price_history": self.price_history
     })
-    
+
     return result, 0, traderData
