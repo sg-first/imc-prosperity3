@@ -75,8 +75,6 @@ plt.grid(True)
 # 调整布局以避免标签重叠
 plt.tight_layout()
 
-# 保存图表
-plt.savefig('spread_chart.png')
 
 # 显示图表
 plt.show()
