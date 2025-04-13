@@ -2,6 +2,7 @@ from datamodel import OrderDepth, UserId, TradingState, Order
 from typing import List
 import json
 import statistics
+import math
 
 from prosperity3.round1.algo_CTST_MR import Product
 
@@ -56,10 +57,11 @@ class Trader:
         return 0
       else: # 使用可用数据的首尾两点
         return prices[-1] - prices[0]
-    
+
     # 使用窗口内的首尾两点计算趋势
     window = prices[-self.WINDOW_SIZE:]  # 取最近的WINDOW_SIZE个价格
     return window[-1] - window[0]  # 终点减起点得到趋势
+
 
   # 做市
   def market_make(self,
@@ -83,26 +85,89 @@ class Trader:
     return buy_order_volume + buy_quantity, sell_order_volume + sell_quantity
 
   # 有方向的做市逻辑(emm起名smd难搞）
-  def make_tendency_orders (self, product : Product, state: TradingState,
-                            position: int, buy_order_volume: int, sell_order_volume: int) ->(List[Order], int, int):
+  def make_tendency_orders (self, product : str, state: TradingState, tendency : float,
+                            position: int, buy_order_volume: int, sell_order_volume: int) ->List[Order]:
     orders: List[Order] = []
-    # 获取趋势
-    tendency = self.get_price_direction(self, state.order_depths[product])
-    # 预计价格上涨时
-    if tendency > 1 :
-      # 少抛多吸，调整买单价差较卖单更小
-      self.BUY_DIFFERENCE = 1
-      self.SELL_DIFFERENCE = 2
-    else :  # 预计价格下跌时
-      self.BUY_DIFFERENCE = 2
-      self.SELL_DIFFERENCE = 1
-    buy_price = max(self.price_history[product]) + self.BUY_DIFFERENCE
-    sell_price = min(self.price_history[product]) - self.SELL_DIFFERENCE
-    # 做市
-    self.market_make(product, orders, buy_price, sell_price, position, buy_order_volume, sell_order_volume)
+    order_depth = state.order_depths[product]
+    best_bid = max(order_depth.buy_orders.keys(), default=0)
+    best_ask = min(order_depth.sell_orders.keys(), default=0)
+
+    # 最大持仓比例
+    max_position_ratio = 0.5
+
+    # 动态计算价差
+    # 根据产品特性差异化参数
+    if product == "SQUID_INK":
+      spread_ratio = 0.003  # 高波动品种扩大价差
+    else:
+      spread_ratio = 0.001
+    # spread_ratio = 0.003
+
+    buy_diff = int(best_bid * spread_ratio)
+    sell_diff = int(best_ask * spread_ratio)
+    print("buy_diff", buy_diff)
+    print("sell_diff", sell_diff)
+
+    # # 预计价格上涨时
+    # if tendency > 0 :
+    #   # 少抛多吸，调整买单价差较卖单更小
+    #   self.BUY_DIFFERENCE = 1
+    #   self.SELL_DIFFERENCE = 2
+    # else :  # 预计价格下跌时
+    #   self.BUY_DIFFERENCE = 2
+    #   self.SELL_DIFFERENCE = 1
+
+    # 趋势自适应
+    if tendency > 0:                    # 上涨趋势
+      buy_diff = max(0, buy_diff - 1)   # 缩小买单价差
+      sell_diff += 1                    # 扩大卖单价差
+    elif tendency < 0:
+      buy_diff += 1
+      sell_diff = max(0, sell_diff - 1)
+
+    # 挂单价格
+    buy_price = best_bid + buy_diff
+    sell_price = best_ask - sell_diff
+
+    # buy_price = max(self.price_history[product]) + buy_diff
+    # sell_price = min(self.price_history[product]) - sell_diff
+    # # 做市
+    # self.market_make(product, orders, buy_price, sell_price, position, buy_order_volume, sell_order_volume)
+
+    # 持仓限制
+    max_position = int(self.LIMIT[product] * max_position_ratio)
+
+    # 计算有效挂单量
+    valid_buy = max(0, min(
+      max_position - position - buy_order_volume,  # 基于策略仓位限制
+      self.LIMIT[product] - position - buy_order_volume  # 硬性仓位限制
+    ))
+
+    valid_sell = max(0, min(
+      max_position + position - sell_order_volume,
+      self.LIMIT[product] + position - sell_order_volume
+    ))
+
+    print("valid_buy", valid_buy)
+    print("valid_sell", valid_sell)
+    print("buy_price", buy_price)
+    print("best_ask", best_ask)
+    print("sell_price", sell_price)
+    print("best_bid", best_bid)
+    # 生成订单
+    if valid_buy > 0 and buy_price < best_ask:  # 买单价需低于最优卖价
+      orders.append(Order(product, buy_price, valid_buy))
+    if valid_sell > 0 and sell_price > best_bid:  # 卖单价需高于最优买价
+      orders.append(Order(product, sell_price, -valid_sell))
+
+
+    return orders
 
   def run(self, state: TradingState):
     result = {}
+    bid_volume = 0
+    ask_volume = 0
+    price_direction = 0
     # 遍历所有产品
     for product in state.order_depths:
       # 如果产品不在价格历史中，初始化价格历史
@@ -114,6 +179,7 @@ class Trader:
       
       # 获取当前持仓，使用state.position
       current_pos = state.position.get(product, 0)
+      print(f"{product}  current_pos: {current_pos:.2f}")
       
       # 计算当前中间价并更新价格历史
       mid_price = self.get_mid_price(order_depth)
@@ -158,8 +224,10 @@ class Trader:
               if sell_volume > 0:
                 orders.append(Order(product, best_bid, -sell_volume))
                 print(f"{product} SELL {sell_volume} @ {best_bid} Direction: {price_direction:.2f}")
-        
-    result[product] = orders
+      # 做市
+      make_orders= self.make_tendency_orders(product, state, price_direction,
+                                                    current_pos, bid_volume,  ask_volume)
+    result[product] = orders  + make_orders
     
     traderData = json.dumps({
       "price_history": self.price_history
