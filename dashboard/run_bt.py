@@ -1,6 +1,6 @@
 import pandas as pd
 from datamodel import Listing, ConversionObservation
-from MYZscore import Trader
+from Z_scores import Trader
 from backtester import Backtester
 
 listings = {
@@ -49,7 +49,7 @@ market_data = pd.read_csv(
     f"../Round 2/round-2-island-data-bottle/prices_round_2_day_{day}.csv", sep=";", header=0
 )
 trade_history = pd.read_csv(
-    f"../round-2-island-data-bottle/trades_round_2_day_{day}.csv", sep=";", header=0
+    f"../Round 2/round-2-island-data-bottle/trades_round_2_day_{day}.csv", sep=";", header=0
 )
 
 trader = Trader()
