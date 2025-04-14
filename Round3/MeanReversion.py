@@ -47,20 +47,41 @@ class MeanReversionAnalyzer:
         print("序列平稳" if result[1] < 0.05 else "序列非平稳")
 
     def hurst_exponent(self):
-        """计算改进的Hurst指数"""
-        if len(self.spread) < 100:
+        """修正后的Hurst指数计算"""
+        spread = self.spread.dropna().values
+        if len(spread) < 100:
             return np.nan
 
-        lags = range(10, min(100, len(self.spread) // 2))
-        tau = []
+        # 调整滞后范围（从1开始）
+        max_lag = min(100, len(spread) // 2)
+        lags = range(1, max_lag + 1)
+
+        # 预计算对数范围
+        log_lags = []
+        log_tau = []
+
         for lag in lags:
-            if 2 * lag > len(self.spread):
+            if 2 * lag > len(spread):
                 continue
-            diff = np.std(np.diff(self.spread, lag) + 1e-8)
-            tau.append(diff)
 
-        return np.polyfit(np.log(lags[:len(tau)]), np.log(tau), 1)[0] * 2
+            # 正确计算滞后差值
+            diffs = spread[lag:] - spread[:-lag]
 
+            # 过滤零值（避免log(0)）
+            std = np.std(diffs)
+            if std < 1e-12:
+                continue
+
+            log_lags.append(np.log(lag))
+            log_tau.append(np.log(std))
+
+        if len(log_lags) < 2:
+            return np.nan
+
+        # 线性回归拟合
+        slope, _ = np.polyfit(log_lags, log_tau, 1)
+        return slope * 2
+    
     def calculate_half_life(self):
         """计算均值回归半衰期"""
         if len(self.spread) < 3:
