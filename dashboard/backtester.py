@@ -261,17 +261,23 @@ class Backtester:
             return self._execute_buy_order(timestamp, order, order_depths, position, cash, trades_at_timestamp, sandboxLog)
         else:
             return self._execute_sell_order(timestamp, order, order_depths, position, cash, trades_at_timestamp, sandboxLog)
-    
+
     def _mark_pnl(self, cash, position, order_depths, pnl, product):
         order_depth = order_depths[product]
-        
+
+        # 判空逻辑：如果卖单或买单的订单簿为空，直接将PNL设为0
+        if not order_depth.sell_orders or not order_depth.buy_orders:
+            pnl[product] = 0
+            return  # 直接返回，不执行后续逻辑
+
         best_ask = min(order_depth.sell_orders.keys())
         best_bid = max(order_depth.buy_orders.keys())
-        mid = (best_ask + best_bid)/2
+        mid = (best_ask + best_bid) / 2
         fair = mid
+
         if product in self.fair_marks:
             get_fair = self.fair_marks[product]
             fair = get_fair(order_depth)
-        
+
         pnl[product] = cash[product] + fair * position[product]
-        
+
