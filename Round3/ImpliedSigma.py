@@ -67,7 +67,7 @@ def implied_volatility(C_market, S, K, T, r, initial_guess=0.2):
 # ----------------------------------
 # 假设参数：
 K = 9500              # 行权价（已知）
-T = 4 / 252           # 剩余到期时间（按自然日计算年化）
+T = 5 / 252           # 剩余到期时间（按自然日计算年化）
 r = 0              # 假设无风险利率为2%（需根据实际情况修改）
 
 # 从数据中提取标的价格和期权价格
@@ -90,7 +90,7 @@ for s, c in zip(S, C_market):
 VOLCANIC_ROCK_VOUCHER_9500_data['implied_vol'] = iv_results
 
 # 输出结果:时间戳+期权中间价+隐含波动率
-#print(VOLCANIC_ROCK_VOUCHER_9500_data[['timestamp', 'mid_price', 'implied_vol']])
+print(VOLCANIC_ROCK_VOUCHER_9500_data[['timestamp', 'mid_price', 'implied_vol']])
 
 analyzer = MeanReversionAnalyzer(VOLCANIC_ROCK_VOUCHER_9500_data['implied_vol'].dropna())
 analyzer.check_stationarity()
