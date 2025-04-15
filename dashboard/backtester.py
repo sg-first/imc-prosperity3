@@ -249,18 +249,18 @@ class Backtester:
             trade_history_dict[timestamp] = new_trades_at_timestamp
                 
         return trades, sandboxLog
-        
-        
-        
+
     def _execute_order(self, timestamp, order, order_depths, position, cash, trades_at_timestamp, sandboxLog):
         if order.quantity == 0:
-            return []
-        
+            return [], sandboxLog  # 返回空的交易列表和sandboxLog
+
         order_depth = order_depths[order.symbol]
         if order.quantity > 0:
-            return self._execute_buy_order(timestamp, order, order_depths, position, cash, trades_at_timestamp, sandboxLog)
+            return self._execute_buy_order(timestamp, order, order_depths, position, cash, trades_at_timestamp,
+                                           sandboxLog)
         else:
-            return self._execute_sell_order(timestamp, order, order_depths, position, cash, trades_at_timestamp, sandboxLog)
+            return self._execute_sell_order(timestamp, order, order_depths, position, cash, trades_at_timestamp,
+                                            sandboxLog)
 
     def _mark_pnl(self, cash, position, order_depths, pnl, product):
         order_depth = order_depths[product]
