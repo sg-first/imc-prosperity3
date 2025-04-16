@@ -82,8 +82,6 @@ class Trader:
   # 有方向的做市逻辑(emm起名smd难搞）
   def make_tendency_orders (self, product : str, state: TradingState, tendency : float,
                             position: int, buy_order_volume: int, sell_order_volume: int) ->List[Order]:
-    if tendency == 0: # 有趋势才对冲
-      return []
 
     orders: List[Order] = []
     order_depth = state.order_depths[product]
