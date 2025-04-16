@@ -9,10 +9,10 @@ class Trader:
   def __init__(self):
     self.price_history = {}  # 存储每个产品的价格历史
     # 不需要自己维护position了，因为TradingState中已经有了
-    self.MAX_POS = 20
+    self.MAX_POS = 50
     self.WINDOW_SIZE = 20  # 滑动窗口大小
-    self.BUY_THRESHOLD = 0.8  # 买入阈值：低于最高点的80%
-    self.SELL_THRESHOLD = 0.2  # 卖出阈值：高于最低点的20%
+    self.BUY_THRESHOLD = 0.1  # 买入阈值：低于最高点的80%
+    self.SELL_THRESHOLD = 0.4  # 卖出阈值：高于最低点的20%
     self.PRICE_LIMITS = { # 为不同产品设置固定的极值点参数
       "RAINFOREST_RESIN": {
         "max": 10003.5,  # 最高价
@@ -111,9 +111,11 @@ class Trader:
       buy_diff += 1
       sell_diff = max(0, sell_diff - 1)
 
+
     # 挂单价格
     sell_price = best_bid + sell_diff   # 高于别人挂的买单最高价挂卖单
     buy_price = best_ask - buy_diff
+
 
     # 持仓限制
     max_position = int(self.LIMIT[product] * max_position_ratio)
@@ -179,7 +181,7 @@ class Trader:
           if best_bid and best_ask:
             # 买入条件：价格低于固定最高价的80%且在上升
             if (mid_price < max_price * self.BUY_THRESHOLD and
-              price_direction > 0 and
+              price_direction <5  and
               current_pos < self.MAX_POS):
               # ask_volume = abs(order_depth.sell_orders[best_ask]) # 获取最优卖价档位的可用数量
               print(f"{product}  ask_volume: {ask_volume:.2f}")
@@ -191,7 +193,7 @@ class Trader:
 
             # 卖出条件：价格高于固定最低价的120%且在下降
             elif (mid_price > min_price * self.SELL_THRESHOLD and
-                price_direction < 0 and
+                price_direction >= 5 and
                 current_pos > -self.MAX_POS):
               # bid_volume = abs(order_depth.buy_orders[best_bid])
               print(f"{product}  bid_volume: {bid_volume:.2f}")
@@ -201,7 +203,8 @@ class Trader:
                 print(f"{product} SELL {sell_volume} @ {best_bid} Direction: {price_direction:.2f}")
 
           # 做市
-          make_orders= self.make_tendency_orders(product, state, price_direction,
+          if price_direction != 0 :
+            make_orders= self.make_tendency_orders(product, state, price_direction,
                                                       current_pos, bid_volume,  ask_volume)
         # print("make_orders", make_orders)
     result[product] = orders  + make_orders
