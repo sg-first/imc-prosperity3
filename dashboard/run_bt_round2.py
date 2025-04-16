@@ -1,6 +1,6 @@
 import pandas as pd
 from datamodel import Listing, ConversionObservation
-from round3_v3_merged import Trader
+from Z_scores import Trader
 from backtester import Backtester
 
 listings = {
@@ -20,13 +20,8 @@ listings = {
         symbol="PICNIC_BASKET1", product="PICNIC_BASKET1", denomination="PICNIC_BASKET1"
     ),
     "PICNIC_BASKET2": Listing(
-        symbol="PICNIC_BASKET2", product="PICNIC_BASKET2", denomination="PICNIC_BASKET2"),
-    "VOLCANIC_ROCK": Listing(symbol="VOLCANIC_ROCK", product="VOLCANIC_ROCK", denomination="VOLCANIC_ROCK"),
-    "VOLCANIC_ROCK_VOUCHER_9500": Listing(symbol="VOLCANIC_ROCK_VOUCHER_9500", product="VOLCANIC_ROCK_VOUCHER_9500", denomination="VOLCANIC_ROCK_VOUCHER_9500"),
-    "VOLCANIC_ROCK_VOUCHER_9750": Listing(symbol=" VOLCANIC_ROCK_VOUCHER_9750", product="VOLCANIC_ROCK_VOUCHER_9750", denomination="VOLCANIC_ROCK_VOUCHER_9750"),
-    "VOLCANIC_ROCK_VOUCHER_10000": Listing(symbol="VOLCANIC_ROCK_VOUCHER_10000", product="VOLCANIC_ROCK_VOUCHER_10000", denomination="VOLCANIC_ROCK_VOUCHER_10000"),
-    "VOLCANIC_ROCK_VOUCHER_10250": Listing(symbol="VOLCANIC_ROCK_VOUCHER_10250", product="VOLCANIC_ROCK_VOUCHER_10250", denomination="VOLCANIC_ROCK_VOUCHER_10250"),
-    "VOLCANIC_ROCK_VOUCHER_10500": Listing(symbol="VOLCANIC_ROCK_VOUCHER_10500", product="VOLCANIC_ROCK_VOUCHER_10500", denomination="VOLCANIC_ROCK_VOUCHER_10500"),
+        symbol="PICNIC_BASKET2", product="PICNIC_BASKET2", denomination="PICNIC_BASKET2"
+    ),
 }
 
 position_limit = {
@@ -38,12 +33,6 @@ position_limit = {
     "JAMS": 350,
     "PICNIC_BASKET1": 60,
     "PICNIC_BASKET2": 100,
-    "VOLCANIC_ROCK":400,
-    "VOLCANIC_ROCK_VOUCHER_9500":200,
-    "VOLCANIC_ROCK_VOUCHER_9750":200,
-    "VOLCANIC_ROCK_VOUCHER_10000":200,
-    "VOLCANIC_ROCK_VOUCHER_10250":200,
-    "VOLCANIC_ROCK_VOUCHER_10500":200,
 }
 
 # 这里写错了，函数需要实际定义，需要老李改一下
@@ -57,10 +46,10 @@ fair_calculations = {
 
 day = 1
 market_data = pd.read_csv(
-    f"../Round3/round-3-island-data-bottle/prices_round_3_day_{day}.csv", sep=";", header=0
+    f"../Round 2/round-2-island-data-bottle/prices_round_2_day_{day}.csv", sep=";", header=0
 )
 trade_history = pd.read_csv(
-    f"../Round3/round-3-island-data-bottle/trades_round_3_day_{day}.csv", sep=";", header=0
+    f"../Round 2/round-2-island-data-bottle/trades_round_2_day_{day}.csv", sep=";", header=0
 )
 
 trader = Trader()
