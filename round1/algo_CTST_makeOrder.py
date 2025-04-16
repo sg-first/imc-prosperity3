@@ -82,6 +82,9 @@ class Trader:
   # 有方向的做市逻辑(emm起名smd难搞）
   def make_tendency_orders (self, product : str, state: TradingState, tendency : float,
                             position: int, buy_order_volume: int, sell_order_volume: int) ->List[Order]:
+    if tendency == 0: # 有趋势才对冲
+      return []
+
     orders: List[Order] = []
     order_depth = state.order_depths[product]
     # 最高卖价
@@ -104,10 +107,10 @@ class Trader:
     buy_diff = int(best_ask * spread_ratio)
 
     # 趋势自适应
-    if tendency > 0:                    # 上涨趋势
+    if tendency < 5:                    # 上涨趋势
       buy_diff = max(0, buy_diff - 1)   # 缩小买单价差
       sell_diff += 1                    # 扩大卖单价差
-    elif tendency < 0:
+    elif tendency >= 5:
       buy_diff += 1
       sell_diff = max(0, sell_diff - 1)
 
@@ -203,9 +206,8 @@ class Trader:
                 print(f"{product} SELL {sell_volume} @ {best_bid} Direction: {price_direction:.2f}")
 
           # 做市
-          if price_direction != 0 :
-            make_orders= self.make_tendency_orders(product, state, price_direction,
-                                                      current_pos, bid_volume,  ask_volume)
+          make_orders= self.make_tendency_orders(product, state, price_direction,
+                                                  current_pos, bid_volume,  ask_volume)
         # print("make_orders", make_orders)
     result[product] = orders  + make_orders
 
