@@ -199,9 +199,10 @@ class Trader:
               if sell_volume > 0:
                 orders.append(Order(product, best_bid, -sell_volume))
                 print(f"{product} SELL {sell_volume} @ {best_bid} Direction: {price_direction:.2f}")
-        # 做市
-        make_orders= self.make_tendency_orders(product, state, price_direction,
-                                                    current_pos, bid_volume,  ask_volume)
+
+          # 做市
+          make_orders= self.make_tendency_orders(product, state, price_direction,
+                                                      current_pos, bid_volume,  ask_volume)
         # print("make_orders", make_orders)
     result[product] = orders  + make_orders
 
