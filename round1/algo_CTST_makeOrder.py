@@ -57,8 +57,43 @@ class Trader:
     window = prices[-self.WINDOW_SIZE:]  # 取最近的WINDOW_SIZE个价格
     return window[-1] - window[0]  # 终点减起点得到趋势
 
+  # 根据波动率和流动性计算动态价差
+  def get_dynamic_spread(self, product, order_depth):
+    # 计算波动率
+    prices = self.price_history[product][-20:]
+    returns = [prices[i] / prices[i - 1] - 1 for i in range(1, len(prices))]
+    volatility = statistics.stdev(returns) if len(returns) >= 2 else 0
 
-  # 做市
+    # 计算订单簿深度
+    bid_depth = sum(order_depth.buy_orders.values())
+    ask_depth = sum(abs(v) for v in order_depth.sell_orders.values())
+    liquidity = (bid_depth + ask_depth) / 1000  # 千单位标准化
+
+    # 动态价差公式
+    base_spread = {
+      "SQUID_INK": max(3, int(volatility * 200)),  # 0.5%波动对应10个tick
+      "KELP": max(1, int(volatility * 50))
+    }
+    return base_spread.get(product, 2) / (1 + liquidity)  # 流动性越好价差越小
+
+  def get_safe_price(self, order_depth, side, base_price)->float:
+    """确保挂单价在有效价格区间内"""
+    min_tick = 1  # 根据交易所规则设置
+    if side == 'buy':
+      # 获取所有卖出价位并找到最近缺口
+      ask_levels = sorted(order_depth.sell_orders.keys())
+      if not ask_levels:
+        return base_price - min_tick
+      nearest_ask = ask_levels[0]
+      return min(base_price, nearest_ask - min_tick)
+    else:
+      # 获取所有买入价位并找到最近缺口
+      bid_levels = sorted(order_depth.buy_orders.keys(), reverse=True)
+      if not bid_levels:
+        return base_price + min_tick
+      nearest_bid = bid_levels[0]
+      return max(base_price, nearest_bid + min_tick)
+    # 做市
   def market_make(self,
     product: str,                           # 交易品种
     orders: List[Order],                    # 待填充的订单列表，函数向其中追加新订单
@@ -79,7 +114,7 @@ class Trader:
 
     return buy_order_volume + buy_quantity, sell_order_volume + sell_quantity
 
-  # 有方向的做市逻辑(emm起名smd难搞）
+  # 有方向的做市逻辑
   def make_tendency_orders (self, product : str, state: TradingState, tendency : float,
                             position: int, buy_order_volume: int, sell_order_volume: int) ->List[Order]:
 
@@ -92,17 +127,15 @@ class Trader:
 
     # 最大持仓比例
     max_position_ratio = 0.5
-
     # 动态计算价差
     # 根据产品特性差异化参数
     if product == "SQUID_INK":
-      spread_ratio = 0.003  # 高波动品种扩大价差
+      sell_diff = self.get_dynamic_spread(product, order_depth)
+      buy_diff = self.get_dynamic_spread(product, order_depth)  # 高波动品种扩大价差
     else:
-      spread_ratio = 0.001
-    # spread_ratio = 0.003
-
-    sell_diff = int(best_bid * spread_ratio)
-    buy_diff = int(best_ask * spread_ratio)
+      spread_ratio = 0.003
+      sell_diff = int(best_bid * spread_ratio)
+      buy_diff = int(best_ask * spread_ratio)
 
     # 趋势自适应
     if tendency < 5:                    # 上涨趋势
@@ -114,8 +147,10 @@ class Trader:
 
 
     # 挂单价格
-    sell_price = best_bid + sell_diff   # 高于别人挂的买单最高价挂卖单
-    buy_price = best_ask - buy_diff
+    raw_buy_price = best_ask - buy_diff
+    raw_sell_price = best_bid + sell_diff
+    buy_price = self.get_safe_price(order_depth, 'buy', raw_buy_price)
+    sell_price = self.get_safe_price(order_depth, 'sell', raw_sell_price)
 
 
     # 持仓限制
