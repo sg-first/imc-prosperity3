@@ -7,6 +7,7 @@ import math
 from math import log, sqrt, exp
 from statistics import NormalDist
 
+
 class Product:
     VOLCANIC_ROCK = "VOLCANIC_ROCK"
     VOUCHERS = [
@@ -25,7 +26,7 @@ class Product:
     DJEMBES = "DJEMBES"
     PICNIC_BASKET2 = "PICNIC_BASKET2"
 
-# 为VOLCANIC_ROCK添加独立参数
+
 PARAMS = {
     "VOLCANIC_ROCK_VOUCHER_9500": {
         "strike": 9500,
@@ -37,7 +38,7 @@ PARAMS = {
         "strike": 9750,
         "std_window": 20,
         "zscore_threshold": 3,
-        "volatility_mean": 0.18,
+        "volatility_mean": 0.18,  # ???-4w
     },
     "VOLCANIC_ROCK_VOUCHER_10000": {
         "strike": 10000,
@@ -57,14 +58,17 @@ PARAMS = {
         "zscore_threshold": 1.5,
         "volatility_mean": 0.15,
     },
+    "VOLCANIC_ROCK": {
+        "position_limit": 400,
+    },
     Product.RAINFOREST_RESIN: {
-        "fair_value": 10000, # 设定商品的基准价格
-        "take_width": 1, # 允许吃单的价差阈值,当对手方订单价格与fair_value的偏离超过clear_width时吃单
+        "fair_value": 10000,  # 设定商品的基准价格
+        "take_width": 1,  # 允许吃单的价差阈值,当对手方订单价格与fair_value的偏离超过clear_width时吃单
         "clear_width": 0,  # 平仓订单的挂单价差范围,要平仓时在fair_value ± clear_width挂单。
         # for making
-        "disregard_edge": 1, # 忽略对手方订单的范围阈值，挂单时忽略对手方订单中与fair_value 过近的订单
-        "join_edge": 2, # 加入已有订单的价差容忍范围，当订单价格在fair_value ± join_edge内时挂相同价格的订单，否则挂更优价格。
-        "default_edge": 4, # 默认挂单价差,当没有可直接交易的订单时，以fair_value ± default_edge挂单。
+        "disregard_edge": 1,  # 忽略对手方订单的范围阈值，挂单时忽略对手方订单中与fair_value 过近的订单
+        "join_edge": 2,  # 加入已有订单的价差容忍范围，当订单价格在fair_value ± join_edge内时挂相同价格的订单，否则挂更优价格。
+        "default_edge": 4,  # 默认挂单价差,当没有可直接交易的订单时，以fair_value ± default_edge挂单。
         "soft_position_limit": 10,
     },
     Product.KELP: {
@@ -73,11 +77,7 @@ PARAMS = {
         "buy_order_volume": 0,
         "sell_order_volume": 0,
     },
-    Product.SQUID_INK: {"WINDOW_SIZE": 20, "BUY_THRESHOLD": 0.4, "SELL_THRESHOLD": 0.7,"PRICE_LIMITS": {
-            "max": 2181,
-            "min": 1740
-        }
-    },
+    Product.SQUID_INK: {"WINDOW_SIZE": 20, "BUY_THRESHOLD": 0.4, "SELL_THRESHOLD": 0.7},
     Product.JAMS: {
         "MAX_POS": 350,
     },
@@ -87,15 +87,8 @@ PARAMS = {
     Product.DJEMBES: {"MAX_POS": 60},
     Product.PICNIC_BASKET1: {"MAX_POS": 60},
     Product.PICNIC_BASKET2: {"MAX_POS": 100},
-    Product.VOLCANIC_ROCK: {  # 新增VOLCANIC_ROCK参数
-        "WINDOW_SIZE": 20,
-        "BUY_THRESHOLD": 0.3,  # 买入阈值
-        "SELL_THRESHOLD": 0.8,  # 卖出阈值
-        "PRICE_LIMITS": {
-            "max": 10500,  # 最高价
-            "min": 9500,  # 最低价
-        }
-    }
+
+
 }
 
 LIMIT = {
@@ -103,6 +96,7 @@ LIMIT = {
     **{voucher: 200 for voucher in Product.VOUCHERS}
 }
 BASKET_WEIGHTS = {Product.CROISSANTS: 6, Product.JAMS: 3, Product.DJEMBES: 1}
+
 
 class BlackScholes:
     @staticmethod
@@ -119,9 +113,11 @@ class BlackScholes:
     ):
         # 处理极端情况
         if time_to_expiry <= 0:
-            return max(0.0, (spot - strike) / spot) # 返回内在价值对应的波动率
+            return max(0.0, (spot - strike) / spot)  # 返回内在价值对应的波动率
+
         # 初始猜测值
         sigma = 0.2
+
         for _ in range(max_iterations):
             price = BlackScholes.black_scholes_call(spot, strike, time_to_expiry, sigma)
             vega = BlackScholes.vega(spot, strike, time_to_expiry, sigma)
@@ -130,14 +126,18 @@ class BlackScholes:
             if abs(vega) < epsilon:
                 sigma += 0.01  # 轻微扰动
                 continue
+
             diff = price - call_price
             if abs(diff) < tolerance:
                 break
+
             # 牛顿迭代公式
             sigma = sigma - diff / vega
+
             # 波动率范围保护
             sigma = max(sigma, 0.01)
             sigma = min(sigma, 2.0)
+
         return sigma
 
     # 保持其他方法不变（black_scholes_call, delta, gamma）
@@ -163,39 +163,40 @@ class BlackScholes:
         d1 = (log(spot / strike) + (0.5 * volatility ** 2) * time_to_expiry) / (volatility * sqrt(time_to_expiry))
         return NormalDist().pdf(d1) / (spot * volatility * sqrt(time_to_expiry))
 
+
 class Trader:
-    def __init__(self, max_position_change=50): # 设置最大头寸变动值的默认参数
+    def __init__(self, max_position_change=50):  # 设置最大头寸变动值的默认参数
         self.risk_free_rate = 0.0
-        self.max_position_change = max_position_change # 最大允许的头寸变动值
+        self.max_position_change = max_position_change  # 最大允许的头寸变动值
         self.trader_data_template = {
             "volatility_history": {voucher: [] for voucher in Product.VOUCHERS},
             "underlying_history": []
         }
         self.trader_data = self.trader_data_template.copy()
-        self.price_history = {} # 存储每个产品的价格历史
+        self.price_history = {}  # 存储每个产品的价格历史
         # 不需要自己维护position了，因为TradingState中已经有了
         self.MAX_POS = 50
-        self.WINDOW_SIZE = 20 # 滑动窗口大小
+        self.WINDOW_SIZE = 20  # 滑动窗口大小
         self.WINDOW_SIZE2 = 200
         self.KELP_MEAN = None
         self.BUY_THRESHOLD = 0.1  # 买入阈值：低于最低价+极差的20%
         self.SELL_THRESHOLD = 0.4  # 卖出阈值：高于最低价+极差的80%
-        self.PRICE_LIMITS = {   # 为不同产品设置固定的极值点参数
+        self.PRICE_LIMITS = {  # 为不同产品设置固定的极值点参数
             "RAINFOREST_RESIN": {
-                "max": 10003.5, # 最高价
-                "min": 9996.5, # 最低价
+                "max": 10003.5,  # 最高价
+                "min": 9996.5,  # 最低价
             },
             "SQUID_INK": {
-                "max": 2181.0, # 最高价
-                "min": 1740, # 最低价
+                "max": 2181.0,  # 最高价
+                "min": 1740,  # 最低价
             },
             "KELP": {
-                "max": 2050, # 最高价
-                "min": 2000, # 最低价
+                "max": 2050,  # 最高价
+                "min": 2000,  # 最低价
             },
-            "VOLCANIC_ROCK": {
-                "max": 10500, # 最高价
-                "min": 9500, # 最低价
+            "VOLCANIC_ROCK":{
+                "max": 10500, #最高价
+                "min": 9500, #最低价
             }
         }
         self.MRTraderObj = MRTrader(PARAMS)
@@ -209,10 +210,10 @@ class Trader:
             Product.CROISSANTS: 250,
             Product.JAMS: 350,
         }
-        self.spread_mean = 48.76 # 初始均值
-        self.spread_var = 85.12 ** 2 # 初始方差
-        self.halflife = 695 # 半衰期
-        self.lambda_ = 1 - np.exp(np.log(0.5) / self.halflife) # 衰减因子
+        self.spread_mean = 48.76  # 初始均值
+        self.spread_var = 85.12 ** 2  # 初始方差
+        self.halflife = 695  # 半衰期
+        self.lambda_ = 1 - np.exp(np.log(0.5) / self.halflife)  # 衰减因子
         self.components = {
             "CROISSANTS": 6,
             "JAMS": 3,
@@ -226,7 +227,8 @@ class Trader:
             # 首次调用时初始化
             self.spread_mean = spread
             self.spread_var = 0.0
-            return 0.0 # 初始标准差为0
+            return 0.0  # 初始标准差为0
+
         # 更新均值
         new_mean = (1 - self.lambda_) * self.spread_mean + self.lambda_ * spread
 
@@ -234,24 +236,29 @@ class Trader:
         new_var = (1 - self.lambda_) * self.spread_var + self.lambda_ * (
                 spread - new_mean
         ) ** 2
+
         # 保存状态
         self.spread_mean = new_mean
         self.spread_var = new_var
-        return np.sqrt(new_var) # 返回标准差
+
+        return np.sqrt(new_var)  # 返回标准差
 
     def handle_basket_arbitrage1(self, state: TradingState):
         """处理野餐篮套利逻辑，严格匹配成分交易"""
         orders = []
         basket_symbol = "PICNIC_BASKET1"
+
         # 获取中间价和仓位
         basket_mid = self.get_mid_price(state.order_depths[basket_symbol])
         component_mids = {
             p: self.get_mid_price(state.order_depths[p]) for p in self.components
         }
         basket_pos = state.position.get(basket_symbol, 0)
+
         # 计算价差和Z值
         fair_value = sum(qty * component_mids[p] for p, qty in self.components.items())
         spread = basket_mid - fair_value
+
         current_std = self.update_spread_stats(spread)
         z_score = (spread - self.spread_mean) / current_std if current_std > 1e-8 else 0.0
 
@@ -264,17 +271,18 @@ class Trader:
             basket_asks = state.order_depths[basket_symbol].sell_orders
             if not basket_asks:
                 return orders
+
             best_ask = min(basket_asks.keys())
             max_sell = min(
                 basket_asks[best_ask],
-                get_max_pos(basket_symbol) + basket_pos, # 当前空头仓位限制
+                get_max_pos(basket_symbol) + basket_pos,  # 当前空头仓位限制
             )
 
             # 计算成分限制
             component_limits = []
             for p, qty in self.components.items():
                 current_p_pos = state.position.get(p, 0)
-                max_p_buy = (get_max_pos(p) - current_p_pos) // qty # 确保整数倍
+                max_p_buy = (get_max_pos(p) - current_p_pos) // qty  # 确保整数倍
                 component_limits.append(max_p_buy)
 
             final_volume = min(max_sell, *component_limits)
@@ -282,11 +290,13 @@ class Trader:
             if final_volume > 0:
                 # 卖出篮子
                 orders.append(Order(basket_symbol, best_ask, -final_volume))
+
                 # 买入成分（吃对手方的卖单）
                 for p, qty in self.components.items():
                     p_asks = state.order_depths[p].sell_orders
                     if not p_asks:
                         continue
+
                     best_p_ask = min(p_asks.keys())
                     buy_volume = final_volume * qty
                     orders.append(Order(p, best_p_ask, buy_volume))
@@ -296,19 +306,22 @@ class Trader:
             basket_bids = state.order_depths[basket_symbol].buy_orders
             if not basket_bids:
                 return orders
+
             best_bid = max(basket_bids.keys())
             max_buy = min(
                 basket_bids[best_bid],
-                get_max_pos(basket_symbol) - basket_pos, # 当前多头仓位限制
+                get_max_pos(basket_symbol) - basket_pos,  # 当前多头仓位限制
             )
 
             # 计算成分限制
             component_limits = []
             for p, qty in self.components.items():
                 current_p_pos = state.position.get(p, 0)
-                max_p_sell = (get_max_pos(p) + current_p_pos) // qty # 确保整数倍
+                max_p_sell = (get_max_pos(p) + current_p_pos) // qty  # 确保整数倍
                 component_limits.append(max_p_sell)
+
             final_volume = min(max_buy, *component_limits)
+
             if final_volume > 0:
                 # 买入篮子
                 orders.append(Order(basket_symbol, best_bid, final_volume))
@@ -318,6 +331,7 @@ class Trader:
                     p_bids = state.order_depths[p].buy_orders
                     if not p_bids:
                         continue
+
                     best_p_bid = max(p_bids.keys())
                     sell_volume = final_volume * qty
                     orders.append(Order(p, best_p_bid, -sell_volume))
@@ -333,7 +347,7 @@ class Trader:
                 best_ask = min(state.order_depths[basket_symbol].sell_orders.keys())
                 orders.append(Order(basket_symbol, best_ask, close_volume))
 
-                # 平仓成分
+            # 平仓成分
             for p, qty in self.components.items():
                 p_pos = state.position.get(p, 0)
                 if p_pos == 0:
@@ -341,7 +355,8 @@ class Trader:
 
                 # 计算需要平仓的数量（根据篮子平仓量比例）
                 hedge_volume = -p_pos * (abs(close_volume) / abs(basket_pos))
-                hedge_volume = int(hedge_volume) # 必须为整数
+                hedge_volume = int(hedge_volume)  # 必须为整数
+
                 if hedge_volume > 0:
                     best_bid = max(state.order_depths[p].buy_orders.keys())
                     orders.append(Order(p, best_bid, hedge_volume))
@@ -367,41 +382,43 @@ class Trader:
         # 动态调整对冲比例（根据市场波动率）
         vol = np.std(self.trader_data["underlying_history"][-20:]) if len(
             self.trader_data["underlying_history"]) >= 20 else 0.2
-        adjust_ratio = min(1.0, 0.5 / (vol + 0.01)) # 波动率越高，对冲比例越低
+        adjust_ratio = min(1.0, 0.5 / (vol + 0.01))  # 波动率越高，对冲比例越低
         adjusted_gap = delta_gap * adjust_ratio
 
         # 生成订单（限价单挂单）
         orders = []
         best_ask = min(state.order_depths[Product.VOLCANIC_ROCK].sell_orders.keys(), default=None)
         best_bid = max(state.order_depths[Product.VOLCANIC_ROCK].buy_orders.keys(), default=None)
+
         if adjusted_gap > 0 and best_ask:
-            price = best_ask - 1 # 挂单在买一价下方1单位
+            price = best_ask - 1  # 挂单在买一价下方1单位
             qty = min(adjusted_gap, LIMIT[Product.VOLCANIC_ROCK] - current_position)
             orders.append(Order(Product.VOLCANIC_ROCK, price, qty))
         elif adjusted_gap < 0 and best_bid:
-            price = best_bid + 1 # 挂单在卖一价上方1单位
+            price = best_bid + 1  # 挂单在卖一价上方1单位
             qty = max(adjusted_gap, -LIMIT[Product.VOLCANIC_ROCK] - current_position)
             orders.append(Order(Product.VOLCANIC_ROCK, price, qty))
+
         return orders
 
     def get_price_direction(self, prices: list) -> float:
         """计算价格方向
-               使用窗口内第一个点和最后一个点计算整体趋势斜率
-               """
-        if len(prices) < self.WINDOW_SIZE: # 数据不足一个完整窗口
-            if len(prices) < 2: # 至少需要两个点
+        使用窗口内第一个点和最后一个点计算整体趋势斜率
+        """
+        if len(prices) < self.WINDOW_SIZE:  # 数据不足一个完整窗口
+            if len(prices) < 2:  # 至少需要两个点
                 return 0
-            else: # 使用可用数据的首尾两点
+            else:  # 使用可用数据的首尾两点
                 return prices[-1] - prices[0]
 
-            # 使用窗口内的首尾两点计算趋势
-        window = prices[-self.WINDOW_SIZE :]  # 取最近的WINDOW_SIZE个价格
+        # 使用窗口内的首尾两点计算趋势
+        window = prices[-self.WINDOW_SIZE:]  # 取最近的WINDOW_SIZE个价格
         return window[-1] - window[0]  # 终点减起点得到趋势
 
     def get_kelp_mean_price(self, product: str):
         if product in self.price_history and len(self.price_history[product]) > 0:
             if len(self.price_history[product]) > self.WINDOW_SIZE2:
-                self.price_history[product].pop(0) # 移除最旧的数据
+                self.price_history[product].pop(0)  # 移除最旧的数据
             self.KELP_MEAN = np.mean(self.price_history[product])
 
     def get_mid_price(self, order_depth: OrderDepth) -> float:
@@ -414,7 +431,7 @@ class Trader:
         elif best_ask:
             return best_ask
         else:
-            return 0.0 # 默认值，需根据实际情况处理
+            return 0.0  # 默认值，需根据实际情况处理
 
     def calculate_greeks(self, state: TradingState) -> Dict[str, Dict[str, float]]:
         greeks = {}
@@ -426,21 +443,26 @@ class Trader:
                 self.trader_data["underlying_history"] = self.trader_data["underlying_history"][-100:]
         else:
             spot = 0.0
+
         # 修正后的时间计算（假设timestamp单位是毫秒）
-        days_passed = state.timestamp / (1000 * 60 * 60 * 24) # 转换为天数
-        time_to_expiry = max((5 - days_passed) / 252, 1e-4) # 年化，最小保留0.0001防止除零
+        days_passed = state.timestamp / (1000 * 60 * 60 * 24)  # 转换为天数
+        time_to_expiry = max((5 - days_passed) / 252, 1e-4)  # 年化，最小保留0.0001防止除零
+
         for voucher in Product.VOUCHERS:
             if voucher not in state.order_depths:
                 continue
+
             strike = PARAMS[voucher]["strike"]
             voucher_price = self.get_mid_price(state.order_depths[voucher])
             if voucher_price <= 0 or spot <= 0:
                 continue
+
             iv = BlackScholes.implied_volatility(voucher_price, spot, strike, time_to_expiry)
             self.trader_data["volatility_history"][voucher].append(iv)
             # 保留最近std_window * 2的数据
             if len(self.trader_data["volatility_history"][voucher]) > PARAMS[voucher]["std_window"] * 2:
-                self.trader_data["volatility_history"][voucher] = self.trader_data["volatility_history"][voucher][-PARAMS[voucher]["std_window"] * 2:]
+                self.trader_data["volatility_history"][voucher] = self.trader_data["volatility_history"][voucher][
+                                                                  -PARAMS[voucher]["std_window"] * 2:]
 
             delta = BlackScholes.delta(spot, strike, time_to_expiry, iv)
             gamma = BlackScholes.gamma(spot, strike, time_to_expiry, iv)
@@ -449,10 +471,11 @@ class Trader:
         spot_history = self.trader_data["underlying_history"]
         if len(spot_history) >= 20:
             returns = np.diff(np.log(spot_history[-20:]))
-            gamma_risk = np.std(returns) * 100 # 波动率放大100倍作为风险系数
+            gamma_risk = np.std(returns) * 100  # 波动率放大100倍作为风险系数
             self.max_position_change = int(50 / (gamma_risk + 0.1))  # 波动率高时减少单次对冲量
         else:
             self.max_position_change = 50
+
         return greeks
 
     def voucher_strategy(self, state: TradingState, voucher: str) -> List[Order]:
@@ -460,9 +483,11 @@ class Trader:
         orders = []
         if voucher not in state.order_depths:
             return orders
+
         order_depth = state.order_depths[voucher]
         position = state.position.get(voucher, 0)
         volatility_history = self.trader_data["volatility_history"][voucher]
+
         if len(volatility_history) >= params["std_window"]:
             current_vol = volatility_history[-1]
             window = volatility_history[-params["std_window"]:]
@@ -470,6 +495,7 @@ class Trader:
             vol_std = np.std(window)
             if vol_std == 0:
                 return orders
+
             z_score = (current_vol - vol_mean) / vol_std
             if z_score > params["zscore_threshold"]:
                 # 做空波动率：卖出期权
@@ -485,12 +511,14 @@ class Trader:
                     buy_qty = min(LIMIT[voucher] - position, -order_depth.sell_orders[best_ask])
                     if buy_qty > 0:
                         orders.append(Order(voucher, best_ask, buy_qty))
+
         return orders
 
     def run(self, state: TradingState):
         # 初始化数据
         if state.traderData:
             self.trader_data.update(jsonpickle.decode(state.traderData))
+
         result = {}
         try:
             # 计算希腊值
@@ -510,8 +538,9 @@ class Trader:
             # Round 2 的策略
             for product in state.order_depths:
                 if product in [Product.KELP, Product.SQUID_INK, Product.PICNIC_BASKET1,
-                            Product.CROISSANTS, Product.JAMS, Product.DJEMBES,
-                            Product.PICNIC_BASKET2, Product.RAINFOREST_RESIN, Product.VOLCANIC_ROCK]:
+                               Product.CROISSANTS, Product.JAMS, Product.DJEMBES,
+                               Product.PICNIC_BASKET2, Product.RAINFOREST_RESIN,Product.VOLCANIC_ROCK]:
+
                     if product not in self.price_history:
                         self.price_history[product] = []
 
@@ -530,9 +559,14 @@ class Trader:
                     elif product == Product.KELP:
                         # KELP专用逻辑
                         self.get_kelp_mean_price(product)
-                        if self.KELP_MEAN is not None and len(order_depth.sell_orders) > 0 and len(order_depth.buy_orders) > 0:
+                        if (
+                                self.KELP_MEAN is not None
+                                and len(order_depth.sell_orders) > 0
+                                and len(order_depth.buy_orders) > 0
+                        ):
                             best_ask = min(order_depth.sell_orders.keys())
                             best_bid = max(order_depth.buy_orders.keys())
+
                             if best_ask < self.KELP_MEAN and current_pos < self.MAX_POS:
                                 ask_volume = abs(order_depth.sell_orders[best_ask])
                                 buy_volume = min(ask_volume, self.MAX_POS - current_pos)
@@ -542,78 +576,93 @@ class Trader:
                                     #     f"KELP BUY {buy_volume} @ {best_ask} (Mean: {self.KELP_MEAN:.2f})"
                                     # )
 
-                            if best_bid > self.KELP_MEAN and current_pos > -self.MAX_POS:
-                                bid_volume = abs(order_depth.buy_orders[best_bid])
-                                sell_volume = min(bid_volume, self.MAX_POS + current_pos)
-                                if sell_volume > 0:
-                                    orders.append(Order(product, best_bid, -sell_volume))
-                                    # print(
-                                    # f"KELP SELL {sell_volume} @ {best_bid} (Mean: {self.KELP_MEAN:.2f})"
-                                    # )
-                    if product == Product.SQUID_INK:
+                        if best_bid > self.KELP_MEAN and current_pos > -self.MAX_POS:
+                            bid_volume = abs(order_depth.buy_orders[best_bid])
+                            sell_volume = min(bid_volume, self.MAX_POS + current_pos)
+                            if sell_volume > 0:
+                                orders.append(Order(product, best_bid, -sell_volume))
+                                # print(
+                                # f"KELP SELL {sell_volume} @ {best_bid} (Mean: {self.KELP_MEAN:.2f})"
+                            # )
+                    elif product == Product.SQUID_INK or product == Product.VOLCANIC_ROCK :
                         # ink产品逻辑
+                        if product == Product.SQUID_INK:
+                            PARAMS = self.PRICE_LIMITS["SQUID_INK"]
+                        else:
+                            PARAMS = self.PRICE_LIMITS["VOLCANIC_ROCK"]
                         if len(self.price_history[product]) > self.WINDOW_SIZE:
                             self.price_history[product].pop(0)
-                        if len(self.price_history[product]) >= 2:
-                            price_direction = self.get_price_direction(self.price_history[product])
-                            price_limits = self.PRICE_LIMITS.get(product)
-                            if price_limits:
-                                max_price = price_limits["max"]
-                                min_price = price_limits["min"]
-                                best_bid = max(order_depth.buy_orders.keys()) if order_depth.buy_orders else 0
-                                best_ask = min(order_depth.sell_orders.keys()) if order_depth.sell_orders else 0
-                                if best_bid and best_ask:
-                                    mid_price = (best_bid + best_ask) / 2
-                                    if mid_price < (
-                                            max_price - min_price) * self.BUY_THRESHOLD + min_price and price_direction < 5 and current_pos < self.MAX_POS:
-                                        ask_volume = abs(order_depth.sell_orders[best_ask])
-                                        buy_volume = min(ask_volume, self.MAX_POS - current_pos, 5)
-                                        if buy_volume > 0:
-                                            orders.append(Order(product, best_ask, buy_volume))
-                                    elif mid_price > (
-                                            max_price - min_price) * self.SELL_THRESHOLD + min_price and price_direction > 5 and current_pos > -self.MAX_POS:
-                                        bid_volume = abs(order_depth.buy_orders[best_bid])
-                                        sell_volume = min(bid_volume, self.MAX_POS + current_pos)
-                                        if sell_volume > 0:
-                                            orders.append(Order(product, best_bid, -sell_volume))
-                    elif product == Product.VOLCANIC_ROCK:
-                        # rock产品逻辑
-                        if len(self.price_history[product]) > PARAMS[product]["WINDOW_SIZE"]:
-                            self.price_history[product].pop(0)
-                        if len(self.price_history[product]) >= 2:
-                            price_direction = self.get_price_direction(self.price_history[product])
-                            price_limits = PARAMS[product]["PRICE_LIMITS"]
-                            if price_limits:
-                                max_price = price_limits["max"]
-                                min_price = price_limits["min"]
-                                best_bid = max(order_depth.buy_orders.keys()) if order_depth.buy_orders else 0
-                                best_ask = min(order_depth.sell_orders.keys()) if order_depth.sell_orders else 0
-                                if best_bid and best_ask:
-                                    mid_price = (best_bid + best_ask) / 2
-                                    if mid_price < (max_price - min_price) * PARAMS[product][
-                                        "BUY_THRESHOLD"] + min_price and price_direction < 5 and current_pos < self.MAX_POS:
-                                        ask_volume = abs(order_depth.sell_orders[best_ask])
-                                        buy_volume = min(ask_volume, self.MAX_POS - current_pos, 5)
-                                        if buy_volume > 0:
-                                            orders.append(Order(product, best_ask, buy_volume))
-                                    elif mid_price > (max_price - min_price) * PARAMS[product][
-                                        "SELL_THRESHOLD"] + min_price and price_direction > 5 and current_pos > -self.MAX_POS:
-                                        bid_volume = abs(order_depth.buy_orders[best_bid])
-                                        sell_volume = min(bid_volume, self.MAX_POS + current_pos)
-                                        if sell_volume > 0:
-                                            orders.append(Order(product, best_bid, -sell_volume))
 
+                        if len(self.price_history[product]) >= 2:
+                            price_direction = self.get_price_direction(
+                                self.price_history[product]
+                            )
+                            price_limits = self.PRICE_LIMITS.get(product)
+
+                            if price_limits:
+                                max_price = price_limits["max"]
+                                min_price = price_limits["min"]
+                                best_bid = (
+                                    max(order_depth.buy_orders.keys())
+                                    if order_depth.buy_orders
+                                    else 0
+                                )
+                                best_ask = (
+                                    min(order_depth.sell_orders.keys())
+                                    if order_depth.sell_orders
+                                    else 0
+                                )
+
+                                if best_bid and best_ask:
+                                    if (
+                                            mid_price
+                                            < (max_price - min_price) * self.BUY_THRESHOLD
+                                            + min_price
+                                            and price_direction < 5
+                                            and current_pos < self.MAX_POS
+                                    ):
+                                        ask_volume = abs(order_depth.sell_orders[best_ask])
+                                        buy_volume = min(
+                                            ask_volume, self.MAX_POS - current_pos, 5
+                                        )
+                                        if buy_volume > 0:
+                                            orders.append(Order(product, best_ask, buy_volume))
+                                            print(
+                                                f"{product} BUY {buy_volume} @ {best_ask} Direction: {price_direction:.2f}"
+                                            )
+
+                                    elif (
+                                            mid_price
+                                            > (max_price - min_price) * self.SELL_THRESHOLD
+                                            + min_price
+                                            and price_direction > 5
+                                            and current_pos > -self.MAX_POS
+                                    ):
+                                        bid_volume = abs(order_depth.buy_orders[best_bid])
+                                        sell_volume = min(
+                                            bid_volume, self.MAX_POS + current_pos
+                                        )
+                                        if sell_volume > 0:
+                                            orders.append(
+                                                Order(product, best_bid, -sell_volume)
+                                            )
+                                            print(
+                                                f"{product} SELL {sell_volume} @ {best_bid} Direction: {price_direction:.2f}"
+                                            )
                     if orders:
                         result[product] = orders
         except Exception as e:
             print(f"Error: {str(e)}")
+
         return result, 0, jsonpickle.encode(self.trader_data)
+
 
 class MRTrader:
     def __init__(self, params=None):
         if params is None:
             params = PARAMS
         self.params = params
+
         self.LIMIT = {
             Product.RAINFOREST_RESIN: 50,
             Product.KELP: 50,
@@ -621,79 +670,91 @@ class MRTrader:
         }
 
     def take_best_orders(
-        self,
-        product: str,
-        fair_value: int,
-        take_width: float,
-        orders: List[Order],
-        order_depth: OrderDepth,
-        position: int,
-        buy_order_volume: int,
-        sell_order_volume: int,
-        prevent_adverse: bool = False,
-        adverse_volume: int = 0,
+            self,
+            product: str,
+            fair_value: int,
+            take_width: float,
+            orders: List[Order],
+            order_depth: OrderDepth,
+            position: int,
+            buy_order_volume: int,
+            sell_order_volume: int,
+            prevent_adverse: bool = False,
+            adverse_volume: int = 0,
     ) -> (int, int):
         position_limit = self.LIMIT[product]
+
         if len(order_depth.sell_orders) != 0:
             best_ask = min(order_depth.sell_orders.keys())
             best_ask_amount = -1 * order_depth.sell_orders[best_ask]
+
             if not prevent_adverse or abs(best_ask_amount) <= adverse_volume:
                 if best_ask <= fair_value - take_width:
                     quantity = min(
                         best_ask_amount, position_limit - position
-                    ) # max amt to buy
-
+                    )  # max amt to buy
                     if quantity > 0:
                         orders.append(Order(product, best_ask, quantity))
                         buy_order_volume += quantity
+                        order_depth.sell_orders[best_ask] += quantity
+                        if order_depth.sell_orders[best_ask] == 0:
+                            del order_depth.sell_orders[best_ask]
+
         if len(order_depth.buy_orders) != 0:
             best_bid = max(order_depth.buy_orders.keys())
             best_bid_amount = order_depth.buy_orders[best_bid]
+
             if not prevent_adverse or abs(best_bid_amount) <= adverse_volume:
                 if best_bid >= fair_value + take_width:
                     quantity = min(
                         best_bid_amount, position_limit + position
-                    ) # should be the max we can sell
+                    )  # should be the max we can sell
                     if quantity > 0:
                         orders.append(Order(product, best_bid, -1 * quantity))
                         sell_order_volume += quantity
+                        order_depth.buy_orders[best_bid] -= quantity
+                        if order_depth.buy_orders[best_bid] == 0:
+                            del order_depth.buy_orders[best_bid]
+
         return buy_order_volume, sell_order_volume
 
     def market_make(
-        self,
-        product: str,
-        orders: List[Order],
-        bid: int,
-        ask: int,
-        position: int,
-        buy_order_volume: int,
-        sell_order_volume: int,
+            self,
+            product: str,
+            orders: List[Order],
+            bid: int,
+            ask: int,
+            position: int,
+            buy_order_volume: int,
+            sell_order_volume: int,
     ) -> (int, int):
         buy_quantity = self.LIMIT[product] - (position + buy_order_volume)
         if buy_quantity > 0:
-            orders.append(Order(product, round(bid), buy_quantity)) # Buy order
+            orders.append(Order(product, round(bid), buy_quantity))  # Buy order
 
         sell_quantity = self.LIMIT[product] + (position - sell_order_volume)
         if sell_quantity > 0:
-            orders.append(Order(product, round(ask), -sell_quantity)) # Sell order
+            orders.append(Order(product, round(ask), -sell_quantity))  # Sell order
         return buy_order_volume, sell_order_volume
 
     def clear_position_order(
-        self,
-        product: str,
-        fair_value: float,
-        width: int,
-        orders: List[Order],
-        order_depth: OrderDepth,
-        position: int,
-        buy_order_volume: int,
-        sell_order_volume: int,
+            self,
+            product: str,
+            fair_value: float,
+            width: int,
+            orders: List[Order],
+            order_depth: OrderDepth,
+            position: int,
+            buy_order_volume: int,
+            sell_order_volume: int,
     ) -> List[Order]:
         position_after_take = position + buy_order_volume - sell_order_volume
         fair_for_bid = round(fair_value - width)
         fair_for_ask = round(fair_value + width)
+
         buy_quantity = self.LIMIT[product] - (position + buy_order_volume)
         sell_quantity = self.LIMIT[product] + (position - sell_order_volume)
+
         if position_after_take > 0:
             # Aggregate volume from all buy orders with price greater than fair_for_ask
             clear_quantity = sum(
@@ -705,6 +766,8 @@ class MRTrader:
             sent_quantity = min(sell_quantity, clear_quantity)
             if sent_quantity > 0:
                 orders.append(Order(product, fair_for_ask, -abs(sent_quantity)))
+                sell_order_volume += abs(sent_quantity)
+
         if position_after_take < 0:
             # Aggregate volume from all sell orders with price lower than fair_for_bid
             clear_quantity = sum(
@@ -716,21 +779,24 @@ class MRTrader:
             sent_quantity = min(buy_quantity, clear_quantity)
             if sent_quantity > 0:
                 orders.append(Order(product, fair_for_bid, abs(sent_quantity)))
+                buy_order_volume += abs(sent_quantity)
+
         return buy_order_volume, sell_order_volume
 
     def take_orders(
-        self,
-        product: str,
-        order_depth: OrderDepth,
-        fair_value: float,
-        take_width: float,
-        position: int,
-        prevent_adverse: bool = False,
-        adverse_volume: int = 0,
+            self,
+            product: str,
+            order_depth: OrderDepth,
+            fair_value: float,
+            take_width: float,
+            position: int,
+            prevent_adverse: bool = False,
+            adverse_volume: int = 0,
     ) -> (List[Order], int, int):
         orders: List[Order] = []
         buy_order_volume = 0
         sell_order_volume = 0
+
         buy_order_volume, sell_order_volume = self.take_best_orders(
             product,
             fair_value,
@@ -747,14 +813,14 @@ class MRTrader:
 
     # 平仓逻辑，在 fair_value ± clear_width 范围内挂单
     def clear_orders(
-        self,
-        product: str,
-        order_depth: OrderDepth,
-        fair_value: float,
-        clear_width: int,
-        position: int,
-        buy_order_volume: int,
-        sell_order_volume: int,
+            self,
+            product: str,
+            order_depth: OrderDepth,
+            fair_value: float,
+            clear_width: int,
+            position: int,
+            buy_order_volume: int,
+            sell_order_volume: int,
     ) -> (List[Order], int, int):
         orders: List[Order] = []
         buy_order_volume, sell_order_volume = self.clear_position_order(
@@ -771,18 +837,18 @@ class MRTrader:
 
     # 做市挂单逻辑，根据 disregard_edge/join_edge/default_edge 计算挂单价格
     def make_orders(
-        self,
-        product,
-        order_depth: OrderDepth,
-        fair_value: float,
-        position: int,
-        buy_order_volume: int,
-        sell_order_volume: int,
-        disregard_edge: float, # disregard trades within this edge for pennying or joining
-        join_edge: float, # join trades within this edge
-        default_edge: float, # default edge to request if there are no levels to penny or join
-        manage_position: bool = False,
-        soft_position_limit: int = 0,
+            self,
+            product,
+            order_depth: OrderDepth,
+            fair_value: float,
+            position: int,
+            buy_order_volume: int,
+            sell_order_volume: int,
+            disregard_edge: float,  # disregard trades within this edge for pennying or joining
+            join_edge: float,  # join trades within this edge
+            default_edge: float,  # default edge to request if there are no levels to penny or join
+            manage_position: bool = False,
+            soft_position_limit: int = 0,
             # will penny all other levels with higher edge
     ):
         orders: List[Order] = []
@@ -796,14 +862,16 @@ class MRTrader:
             for price in order_depth.buy_orders.keys()
             if price < fair_value - disregard_edge
         ]
+
         best_ask_above_fair = min(asks_above_fair) if len(asks_above_fair) > 0 else None
         best_bid_below_fair = max(bids_below_fair) if len(bids_below_fair) > 0 else None
+
         ask = round(fair_value + default_edge)
         if best_ask_above_fair != None:
             if abs(best_ask_above_fair - fair_value) <= join_edge:
-                ask = best_ask_above_fair # join
+                ask = best_ask_above_fair  # join
             else:
-                ask = best_ask_above_fair - 1 # penny
+                ask = best_ask_above_fair - 1  # penny
 
         bid = round(fair_value - default_edge)
         if best_bid_below_fair != None:
@@ -811,11 +879,13 @@ class MRTrader:
                 bid = best_bid_below_fair
             else:
                 bid = best_bid_below_fair + 1
+
         if manage_position:
             if position > soft_position_limit:
                 ask -= 1
             elif position < -1 * soft_position_limit:
                 bid += 1
+
         buy_order_volume, sell_order_volume = self.market_make(
             product,
             orders,
@@ -825,12 +895,14 @@ class MRTrader:
             buy_order_volume,
             sell_order_volume,
         )
+
         return orders, buy_order_volume, sell_order_volume
 
     def handle_resin_trading(trader, state: TradingState):
         # 从state获取当前仓位和订单簿
         resin_position = state.position.get(Product.RAINFOREST_RESIN, 0)
-        order_depth = state.order_depths[Product.RAINFOREST_RESIN] # 直接取订单簿
+        order_depth = state.order_depths[Product.RAINFOREST_RESIN]  # 直接取订单簿
+
         resin_take_orders, buy_order_volume, sell_order_volume = trader.take_orders(
             Product.RAINFOREST_RESIN,
             state.order_depths[Product.RAINFOREST_RESIN],
@@ -872,12 +944,16 @@ class MRTrader:
         traderObject = {}
         if state.traderData != None and state.traderData != "":
             traderObject = jsonpickle.decode(state.traderData)
+
         result = {}
+
         if (
-            Product.RAINFOREST_RESIN in self.params
-            and Product.RAINFOREST_RESIN in state.order_depths
+                Product.RAINFOREST_RESIN in self.params
+                and Product.RAINFOREST_RESIN in state.order_depths
         ):
             result[Product.RAINFOREST_RESIN] = self.handle_resin_trading(self, state)
+
         conversions = 1
         traderData = jsonpickle.encode(traderObject)
+
         return result, conversions, traderData
