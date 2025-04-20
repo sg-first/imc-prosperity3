@@ -378,13 +378,20 @@ class Trader:
     def MAGNIFICENT_MACARONS_arb_clear(
             self,
             position: int
-    ) -> int:
+    ) ->(List[Order], int):
+     orders: List[Order] = []
      if bidPrice > best_bid:
-        conversions = -position
-        conversions = max(-10, min(10, conversions))
-     else:orders.append(Order(Product.MAGNIFICENT_MACARONS,best_ask,buy_order_volume))
-     orders=[orders.append(Order(Product.MAGNIFICENT_MACARONS,best_ask,buy_order_volume))]
+         conversions = -position
+         conversions = max(-10, min(10, conversions))
+
+     else:
+         orders.append(Order(Product.MAGNIFICENT_MACARONS,best_ask,buy_order_volume)
+     )
+
      return conversions,orders
+
+
+
 
     def MAGNIFICENT_MACARONS_arb_make(
             self,
@@ -791,7 +798,7 @@ class Trader:
             )
 
             result[Product.MAGNIFICENT_MACARONS] = (
-                    MAGNIFICENT_MACARONS_take_orders + MAGNIFICENT_MACARONS_make_orders
+                    MAGNIFICENT_MACARONS_take_orders + MAGNIFICENT_MACARONS_make_orders + MAGNIFICENT_MACARONS_clear_orders
             )
 
         traderData = jsonpickle.encode(traderObject)
