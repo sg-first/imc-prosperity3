@@ -379,10 +379,12 @@ class Trader:
             self,
             position: int
     ) -> int:
+     if bidPrice > best_bid:
         conversions = -position
-
         conversions = max(-10, min(10, conversions))
-        return conversions
+     else:orders.append(Order(Product.MAGNIFICENT_MACARONS,best_ask,buy_order_volume))
+     orders=[orders.append(Order(Product.MAGNIFICENT_MACARONS,best_ask,buy_order_volume))]
+     return conversions,orders
 
     def MAGNIFICENT_MACARONS_arb_make(
             self,
@@ -762,7 +764,7 @@ class Trader:
             )
             print(f"MAGNIFICENT_MACARONS POSITION: {MAGNIFICENT_MACARONS_position}")
 
-            conversions = self.MAGNIFICENT_MACARONS_arb_clear(
+            conversions,orders = self.MAGNIFICENT_MACARONS_arb_clear(
                 MAGNIFICENT_MACARONS_position
             )
 
