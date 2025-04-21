@@ -379,9 +379,8 @@ class Trader:
             self,
             state,
             position: int,
-    ) ->(List[Order], int,float):
+    ) ->(List[Order], int):
      orders: List[Order] = []
-     best_ask = min(order_depth.sell_orders.keys(), default=0)
      orders_bid = max(order_depth.buy_orders.keys(), default=0)
      convert_bid = state.observations.conversionObservations[Product.MAGNIFICENT_MACARONS].bidPrice
      volume = -position
@@ -391,7 +390,7 @@ class Trader:
          conversions = volume
 
      else:
-        orders.append(Order(Product.MAGNIFICENT_MACARONS, best_ask, volume))
+        orders.append(Order(Product.MAGNIFICENT_MACARONS,orders_bid,volume))
         conversions = 0
      return conversions,orders
 
