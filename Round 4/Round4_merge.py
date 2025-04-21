@@ -776,7 +776,8 @@ class Trader:
             print(f"MAGNIFICENT_MACARONS POSITION: {MAGNIFICENT_MACARONS_position}")
 
             conversions,orders = self.MAGNIFICENT_MACARONS_arb_clear(
-                MAGNIFICENT_MACARONS_position
+                MAGNIFICENT_MACARONS_position,
+                state.observations.conversionObservations[Product.MAGNIFICENT_MACARONS]
             )
 
             MAGNIFICENT_MACARONS_position += conversions
