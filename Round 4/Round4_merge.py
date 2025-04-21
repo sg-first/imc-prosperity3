@@ -389,7 +389,6 @@ class Trader:
      if convert_bid > orders_bid:
          orders = []
          conversions = volume
-         return conversions, orders
 
      else:
         orders.append(Order(Product.MAGNIFICENT_MACARONS, best_ask, volume))
