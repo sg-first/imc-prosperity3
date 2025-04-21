@@ -377,17 +377,23 @@ class Trader:
 
     def MAGNIFICENT_MACARONS_arb_clear(
             self,
-            position: int
-    ) ->(List[Order], int):
+            state,
+            position: int,
+    ) ->(List[Order], int,float):
      orders: List[Order] = []
-     if bidPrice > best_bid:
-         conversions = -position
-         conversions = max(-10, min(10, conversions))
+     best_ask = min(order_depth.sell_orders.keys(), default=0)
+     orders_bid = max(order_depth.buy_orders.keys(), default=0)
+     convert_bid = state.observations.conversionObservations[Product.MAGNIFICENT_MACARONS].bidPrice
+     volume = -position
+     volume = max(-10, min(10, volume))
+     if convert_bid > orders_bid:
+         orders = []
+         conversions = volume
+         return conversions, orders
 
      else:
-         orders.append(Order(Product.MAGNIFICENT_MACARONS,best_ask,buy_order_volume)
-     )
-
+        orders.append(Order(Product.MAGNIFICENT_MACARONS, best_ask, volume))
+        conversions = 0
      return conversions,orders
 
 
@@ -795,6 +801,15 @@ class Trader:
                 traderObject["MAGNIFICENT_MACARONS"]["curr_edge"],
                 buy_order_volume,
                 sell_order_volume
+            )
+
+            MAGNIFICENT_MACARONS_clear_orders,buy_order_volume = self.MAGNIFICENT_MACARONS_arb_clear(
+                state.order_depths[Product.MAGNIFICENT_MACARONS],
+                state.observations.conversionObservations[Product.MAGNIFICENT_MACARONS],
+                MAGNIFICENT_MACARONS_position,
+                conversions
+
+
             )
 
             result[Product.MAGNIFICENT_MACARONS] = (
