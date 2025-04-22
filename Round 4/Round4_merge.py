@@ -378,7 +378,6 @@ class Trader:
     def MAGNIFICENT_MACARONS_arb_clear(
             self,
             state,
-            order_depth: OrderDepth,
             position: int,
     ) ->(List[Order], int):
      orders: List[Order] = []
