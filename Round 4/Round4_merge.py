@@ -378,6 +378,7 @@ class Trader:
     def MAGNIFICENT_MACARONS_arb_clear(
             self,
             state,
+            order_depth: OrderDepth,
             position: int,
     ) ->(List[Order], int):
      orders: List[Order] = []
@@ -777,6 +778,7 @@ class Trader:
 
             conversions, MAGNIFICENT_MACARONS_clear_orders = self.MAGNIFICENT_MACARONS_arb_clear(
                 state,
+                state.order_depths[Product.MAGNIFICENT_MACARONS],
                 MAGNIFICENT_MACARONS_position,
             )
 
