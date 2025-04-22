@@ -775,7 +775,7 @@ class Trader:
             )
             print(f"MAGNIFICENT_MACARONS POSITION: {MAGNIFICENT_MACARONS_position}")
 
-            conversions,orders = self.MAGNIFICENT_MACARONS_arb_clear(
+            conversions, MAGNIFICENT_MACARONS_clear_orders = self.MAGNIFICENT_MACARONS_arb_clear(
                 state,
                 MAGNIFICENT_MACARONS_position,
             )
@@ -803,7 +803,7 @@ class Trader:
             )
 
             result[Product.MAGNIFICENT_MACARONS] = (
-                    MAGNIFICENT_MACARONS_take_orders + MAGNIFICENT_MACARONS_make_orders + orders
+                    MAGNIFICENT_MACARONS_take_orders + MAGNIFICENT_MACARONS_make_orders + MAGNIFICENT_MACARONS_clear_orders
             )
 
         traderData = jsonpickle.encode(traderObject)
