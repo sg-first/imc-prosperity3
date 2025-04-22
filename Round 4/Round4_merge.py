@@ -382,6 +382,7 @@ class Trader:
             position: int,
     ) ->(List[Order], int):
      orders: List[Order] = []
+     order_depth = state.order_depths[Product.MAGNIFICENT_MACARONS]
      orders_bid = max(order_depth.buy_orders.keys(), default=0)
      convert_bid = state.observations.conversionObservations[Product.MAGNIFICENT_MACARONS].bidPrice
      volume = -position
@@ -778,7 +779,6 @@ class Trader:
 
             conversions, MAGNIFICENT_MACARONS_clear_orders = self.MAGNIFICENT_MACARONS_arb_clear(
                 state,
-                state.order_depths[Product.MAGNIFICENT_MACARONS],
                 MAGNIFICENT_MACARONS_position,
             )
 
