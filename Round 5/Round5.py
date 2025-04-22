@@ -672,8 +672,8 @@ class Trader:
         if product in self.price_history and len(self.price_history[product]) > 0:
             if len(self.price_history[product]) > self.KELP_WINDOW_SIZE:
                 self.price_history[product].pop(0)  # 移除最旧的数据
-            self.KELP_MEAN = np.mean(self.price_history[product])
-        return self.KELP_MEAN
+            kelpMean = np.mean(self.price_history[product])
+            return kelpMean
 
     def get_mid_price(self, order_depth: OrderDepth) -> float:
         best_bid = max(order_depth.buy_orders.keys()) if order_depth.buy_orders else 0

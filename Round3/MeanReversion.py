@@ -17,12 +17,6 @@ class MeanReversionAnalyzer:
     - Hurst指数计算
     - 半衰期计算
     - 可视化分析
-
-    使用方法：
-    >>> from MeanReversion import MeanReversionAnalyzer
-    >>> analyzer = MeanReversionAnalyzer(spread_series)
-    >>> analyzer.check_stationarity()
-    >>> analyzer.plot_analysis()
     """
 
     def __init__(self, spread_series):
