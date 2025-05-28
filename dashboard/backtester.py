@@ -2,21 +2,22 @@ from typing import Dict, List, Any
 import pandas as pd
 import json
 from collections import defaultdict
-from datamodel import TradingState, Listing, OrderDepth, Trade, Observation, Order, UserId
+from datamodel import TradingState, Listing, OrderDepth, Trade, Observation, Order, UserId,ConversionObservation
 
 
 class Backtester:
     def __init__(self, trader, listings: Dict[str, Listing], position_limit: Dict[str, int], fair_marks, 
-                 market_data: pd.DataFrame, trade_history: pd.DataFrame, file_name: str = None):
+                 market_data: pd.DataFrame, trade_history: pd.DataFrame, observationsData: pd.DataFrame, file_name: str = None):
         self.trader = trader
         self.listings = listings
         self.market_data = market_data
         self.position_limit = position_limit
         self.fair_marks = fair_marks
         self.trade_history = trade_history.sort_values(by=['timestamp', 'symbol'])
+        self.observationsData = observationsData
         self.file_name = file_name
 
-        self.observations = [Observation({}, {}) for _ in range(len(market_data))]
+        self.observations = {}
 
         self.current_position = {product: 0 for product in self.listings.keys()}
         self.pnl_history = []
@@ -24,13 +25,14 @@ class Backtester:
         self.cash = {product: 0 for product in self.listings.keys()}
         self.trades = []
         self.sandbox_logs = []
+        self.timestamp_group_ob = {}
         
     def run(self):
         traderData = ""
         
         timestamp_group_md = self.market_data.groupby('timestamp')
         timestamp_group_th = self.trade_history.groupby('timestamp')
-        
+        self.timestamp_group_ob = self.observationsData.groupby('timestamp')
         own_trades = defaultdict(list)
         market_trades = defaultdict(list)
         pnl_product = defaultdict(float)
@@ -52,13 +54,13 @@ class Backtester:
                 trades.append(trade)
             trade_history_dict[timestamp] = trades
         
-        
         for timestamp, group in timestamp_group_md:
+            observation = self._construct_observation(timestamp)
             order_depths = self._construct_order_depths(group)
             order_depths_matching = self._construct_order_depths(group)
             order_depths_pnl = self._construct_order_depths(group)
             state = self._construct_trading_state(traderData, timestamp, self.listings, order_depths, 
-                                 dict(own_trades), dict(market_trades), self.current_position, self.observations)
+                                 dict(own_trades), dict(market_trades), self.current_position, observation)
             orders, conversions, traderData = self.trader.run(state)
             products = group['product'].tolist()
             sandboxLog = ""
@@ -88,7 +90,28 @@ class Backtester:
                 self.pnl_history.append(self.pnl[product])
             self._add_trades(own_trades, market_trades)
         return self._log_trades(self.file_name)
-    
+
+    def _construct_observation(self, timestamp: int) -> Observation:
+        obs_data = self.timestamp_group_ob.get_group(timestamp)
+        plain_obs = {}
+        conversion_obs = {}
+        data = obs_data.iloc[0]
+
+        conversion_obs['MAGNIFICENT_MACARONS'] = ConversionObservation(
+            bidPrice=data['bidPrice'],
+            askPrice=data['askPrice'],
+            transportFees=data['transportFees'],
+            exportTariff=data['exportTariff'],
+            importTariff=data['importTariff'],
+            sugarPrice = data['sugarPrice'],
+            sunlightIndex = data['sunlightIndex']
+        )
+
+        return Observation(
+            plainValueObservations=plain_obs,
+            conversionObservations=conversion_obs
+        )
+
     
     def _log_trades(self, filename: str = None):
         if filename is None:
@@ -132,9 +155,9 @@ class Backtester:
         }
         
     def _construct_trading_state(self, traderData, timestamp, listings, order_depths, 
-                                 own_trades, market_trades, position, observations):
+                                 own_trades, market_trades, position, observation):
         state = TradingState(traderData, timestamp, listings, order_depths, 
-                             own_trades, market_trades, position, observations)
+                             own_trades, market_trades, position, observation)
         return state
     
         

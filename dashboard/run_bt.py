@@ -27,6 +27,7 @@ listings = {
     "VOLCANIC_ROCK_VOUCHER_10000": Listing(symbol="VOLCANIC_ROCK_VOUCHER_10000", product="VOLCANIC_ROCK_VOUCHER_10000", denomination="VOLCANIC_ROCK_VOUCHER_10000"),
     "VOLCANIC_ROCK_VOUCHER_10250": Listing(symbol="VOLCANIC_ROCK_VOUCHER_10250", product="VOLCANIC_ROCK_VOUCHER_10250", denomination="VOLCANIC_ROCK_VOUCHER_10250"),
     "VOLCANIC_ROCK_VOUCHER_10500": Listing(symbol="VOLCANIC_ROCK_VOUCHER_10500", product="VOLCANIC_ROCK_VOUCHER_10500", denomination="VOLCANIC_ROCK_VOUCHER_10500"),
+    "MAGNIFICENT_MACARONS":Listing(symbol="MAGNIFICENT_MACARONS", product="MAGNIFICENT_MACARONS", denomination="MAGNIFICENT_MACARONS")
 }
 
 position_limit = {
@@ -44,6 +45,7 @@ position_limit = {
     "VOLCANIC_ROCK_VOUCHER_10000":200,
     "VOLCANIC_ROCK_VOUCHER_10250":200,
     "VOLCANIC_ROCK_VOUCHER_10500":200,
+    "MAGNIFICENT_MACARONS" : 75
 }
 
 # 这里写错了，函数需要实际定义，需要老李改一下
@@ -55,12 +57,16 @@ fair_calculations = {
 """
 }
 
-day = 1
+day = 4
 market_data = pd.read_csv(
-    f"../Round3/round-3-island-data-bottle/prices_round_3_day_{day}.csv", sep=";", header=0
+    f"round-5-island-data-bottle/prices_round_5_day_{day}.csv", sep=";", header=0
 )
 trade_history = pd.read_csv(
-    f"../Round3/round-3-island-data-bottle/trades_round_3_day_{day}.csv", sep=";", header=0
+    f"round-5-island-data-bottle/trades_round_5_day_{day}.csv", sep=";", header=0
+)
+
+observationsData = pd.read_csv(
+    f"round-5-island-data-bottle/observations_round_5_day_{day}.csv", header=0
 )
 
 trader = Trader()
@@ -71,7 +77,9 @@ backtester = Backtester(
     {},
     market_data,
     trade_history,
+    observationsData,
     "trade_history_sim.log",
+
 )  # 因为fair_calculations函数没写所以传空，backtester里找不到函数，会用中间价作为fair
 backtester.run()
 print(backtester.pnl)
